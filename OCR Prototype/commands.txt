@@ -1,0 +1,33 @@
+# ---------------------------------------------------------------- Stage 0 + 1 UI
+streamlit run app.py
+
+
+# ---------------------------------------------------------------- Local VLM (Tier 2, FREE)
+# Start this ONCE, in its own terminal, and leave it running.
+# The model loads once and stays resident; every script then just POSTs to localhost.
+# Importing mlx_vlm in-process instead meant a ~130s cold load per script AND each process
+# carrying 3-4GB of weights - which starved the machine and crashed VS Code.
+#
+# NOTE: use gemma-3, not Qwen2.5-VL. Qwen2.5-VL crashes under mlx_vlm.server with
+#   "RuntimeError: There is no Stream(gpu, 2) in current thread"
+# (an mlx-vlm threading bug in its rope code). Gemma-3 serves fine.
+
+venv/bin/python -m mlx_vlm.server \
+    --model mlx-community/gemma-3-4b-it-4bit \
+    --port 8080 --kv-bits 8 --max-tokens 512
+
+# If the server is not running, the router just skips the VLM tier - nothing breaks.
+
+
+# ---------------------------------------------------------------- Benchmarks
+# Field recall + escalation rate + preprocessed-vs-raw (RapidOCR only, fast)
+venv/bin/python evaluate_ocr.py --n 60
+
+# Same, but with the free local VLM tier enabled (needs the server above)
+venv/bin/python evaluate_ocr.py --n 60 --vlm
+
+# RapidOCR vs local VLM, head-to-head on the images RapidOCR struggles with
+venv/bin/python compare_engines.py --n 12
+
+# Is 40% field recall the engine's fault, or how we feed it? (tiling / thresholds)
+venv/bin/python tune_ocr.py

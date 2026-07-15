@@ -8,15 +8,22 @@ streamlit run app.py
 # Importing mlx_vlm in-process instead meant a ~130s cold load per script AND each process
 # carrying 3-4GB of weights - which starved the machine and crashed VS Code.
 #
-# NOTE: use gemma-3, not Qwen2.5-VL. Qwen2.5-VL crashes under mlx_vlm.server with
-#   "RuntimeError: There is no Stream(gpu, 2) in current thread"
-# (an mlx-vlm threading bug in its rope code). Gemma-3 serves fine.
+# NOTE: use gemma-3. The ENTIRE Qwen-VL family (Qwen2.5-VL AND Qwen3-VL, both tested)
+# crashes under mlx_vlm.server with "RuntimeError: There is no Stream(gpu, N) in current
+# thread" - the identical get_rope_index() code in qwen2_5_vl/language.py and
+# qwen3_vl/language.py touches the GPU from the server's worker thread. This is a shared
+# mlx-vlm library bug, not a per-model issue - don't retry any Qwen-VL model here until
+# mlx-vlm fixes it upstream. Gemma-3 is the only VLM family confirmed to serve correctly.
+#
+# mlx_vlm.server supports several cached models and lazy-swaps between them per request
+# (unload current, load requested) - so switching models is just changing MODEL in
+# ocr/local_vlm.py, no server restart needed. But /v1/models lists EVERY model ever
+# cached to disk, not "what's currently loaded" - do not infer the active model from it.
 
+- For Gemma 3 Quantised to 4 bits
 venv/bin/python -m mlx_vlm.server \
     --model mlx-community/gemma-3-4b-it-4bit \
     --port 8080 --kv-bits 8 --max-tokens 512
-
-# If the server is not running, the router just skips the VLM tier - nothing breaks.
 
 
 # ---------------------------------------------------------------- Benchmarks

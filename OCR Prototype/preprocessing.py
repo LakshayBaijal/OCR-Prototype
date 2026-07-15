@@ -52,12 +52,10 @@ def load_rgb(path: str) -> np.ndarray:
 
 
 def corner_pixels(rgb: np.ndarray, patch: float = 0.05) -> np.ndarray:
-    """Pixels from the four corner patches.
-
-    Sampling the *whole* border was a trap: a product that runs off the edge of the frame
-    (a calculator shot edge-to-edge, say) puts its own colours into that band, the model
-    "learns" the product as backdrop, and then erases it. Products bleed off an edge often;
-    they almost never occupy all four corners at once. So corners are the honest sample.
+    """Pixels from the four corner patches. Kept around for `border_colour` (a single
+    representative fill colour for rotation padding, where a little contamination is
+    cosmetic, not a correctness risk). For the background *model* itself, see
+    `border_ring_pixels` - corners alone are not a safe sample for that.
     """
     h, w = rgb.shape[:2]
     ph, pw = max(8, int(h * patch)), max(8, int(w * patch))
@@ -67,30 +65,74 @@ def corner_pixels(rgb: np.ndarray, patch: float = 0.05) -> np.ndarray:
     ])
 
 
+def border_ring_pixels(rgb: np.ndarray, frac: float = 0.015) -> np.ndarray:
+    """Pixels from a thin strip around the FULL image perimeter.
+
+    Four small corner squares break down the moment a product spans the whole frame
+    edge-to-edge - e.g. a tray of many small identical items (pens, sachets) shot close
+    together, which routinely touches all four corners at once. That is not a rare edge
+    case here: it is the standard layout for a bulk/multipack product photo. A full
+    perimeter ring is far harder to swamp - the product would need to hug nearly the
+    ENTIRE border, not just a corner, to outweigh the real backdrop in the sample.
+    """
+    h, w = rgb.shape[:2]
+    t = max(6, int(min(h, w) * frac))
+    return np.concatenate([
+        rgb[:t, :].reshape(-1, 3), rgb[-t:, :].reshape(-1, 3),
+        rgb[:, :t].reshape(-1, 3), rgb[:, -t:].reshape(-1, 3),
+    ])
+
+
 def background_model(rgb: np.ndarray, k: int = 3) -> tuple[np.ndarray, float]:
-    """Learn the backdrop's colours from the corners of the image.
+    """Learn the backdrop's colours from a ring around the image border.
 
     The dataset is not uniformly white studio: plenty of shots stage the product on a
-    coloured, gradient backdrop. So rather than hardcoding white, we cluster the corner
+    coloured, gradient backdrop. So rather than hardcoding white, we cluster border
     pixels and let the image tell us what its own background looks like.
 
-    Returns the cluster centres and a tolerance derived from how tightly those clusters
-    fit. A flat white sweep yields a tight tolerance (so cream packaging is still read as
-    product); a gradient backdrop yields a looser one (so the whole sweep is still read
-    as background).
+    A cluster that only claims a sliver of the ring is not a second backdrop tone - it is
+    product bleeding across *part* of the border (a calculator's edge, a tray of pens
+    touching one side). Blending its colour into the tolerance would make the model
+    swallow the product itself: on one bulk-pens photo this alone inflated the tolerance
+    from ~20 to 124, misclassifying most of each pen's body as background and shredding
+    the whole tray into noise that later got welded back into a single giant blob. So
+    only clusters holding a real share of the ring count toward the backdrop colour or
+    its tolerance; a small cluster is dropped, not blended in.
     """
-    b = corner_pixels(rgb).astype(np.float32)
+    b = border_ring_pixels(rgb).astype(np.float32)
 
-    if len(b) > 20000:  # subsample: k-means does not need every corner pixel
+    if len(b) > 20000:  # subsample: k-means does not need every ring pixel
         b = b[np.random.default_rng(0).choice(len(b), 20000, replace=False)]
 
     k = min(k, len(np.unique(b, axis=0)))
     crit = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
     _, labels, centers = cv2.kmeans(b, k, None, crit, 3, cv2.KMEANS_PP_CENTERS)
+    labels = labels.ravel()
 
-    spread = np.linalg.norm(b - centers[labels.ravel()], axis=1)
-    tol = max(18.0, float(np.percentile(spread, 99)) * 1.5 + 10.0)
+    counts = np.bincount(labels, minlength=k)
+    keep = [i for i in range(k) if counts[i] / len(labels) >= 0.08]
+    if not keep:  # pathological: every cluster is a sliver - fall back to all of them
+        keep = list(range(k))
+    centers = centers[keep]
+
+    mask = np.isin(labels, keep)
+    nearest = np.min([np.linalg.norm(b[mask] - c, axis=1) for c in centers], axis=0)
+    tol = max(15.0, float(np.percentile(nearest, 95)) * 1.3 + 8.0)
     return centers, tol
+
+
+# KNOWN RESIDUAL LIMITATION (found via regression testing, not fixed - see commands.txt /
+# conversation history for the reasoning): a backdrop with a second, strongly-coloured
+# decorative element (e.g. a printed leaf/graphic pattern behind the product) can occasionally
+# produce an extra "instance" in step_group that is just that decoration, not a real product -
+# because the ring sample above only lightly touches such elements and correctly treats them
+# as too small a share of the ring to count as backdrop, but they're not product either.
+# Deliberately NOT auto-filtered: tested both a size-ratio filter and an edge-density
+# ("does this crop have any print on it") filter against real examples, and both would have
+# silently dropped genuine product content (a low-print tagline banner, a matte accessory)
+# in other images - a worse failure than an occasional harmless empty extra crop, since this
+# pipeline scores OCR text as a union across crops, so a blank crop costs a free local OCR
+# call and nothing else.
 
 
 def solidify(fg: np.ndarray, bridge: int = 3) -> np.ndarray:
@@ -465,10 +507,21 @@ def step_background(
 
 
 def step_group(
-    rgb: np.ndarray, mask: np.ndarray, min_area_frac: float = 0.04, pad: int = 8
+    rgb: np.ndarray, mask: np.ndarray, min_area_frac: float = 0.005, pad: int = 8
 ) -> tuple[StepResult, list[np.ndarray]]:
     """Multi-image grouping: catalog shots often show the same pack 2-3 times.
-    Split them so OCR reads one product face at a time instead of a collage."""
+    Split them so OCR reads one product face at a time instead of a collage.
+
+    `min_area_frac` used to default to 0.04 (4% of the image). That is fine for telling
+    a repeated product copy apart from noise, but a single back-panel photo routinely lays
+    out several DIFFERENT-sized info blocks on its own printed background (nutrition table,
+    ingredients, barcode, FSSAI licence, flavour callouts) - and at 4%, a barcode (~3.3% on
+    a real example) and an FSSAI licence number (~2.2%) both fell under the bar and were
+    silently dropped from OCR entirely, never recovered by any engine downstream. Lowering
+    this close to `segment()`'s own despeckle floor (0.002) means real content blocks - even
+    small ones - survive; the only images affected are the (rare) ones with an isolated
+    scrap this small, which becomes a harmless extra crop rather than lost data.
+    """
     h, w = rgb.shape[:2]
     n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
 
@@ -563,7 +616,7 @@ def run_pipeline(path: str, cfg: dict | None = None) -> tuple[list[StepResult], 
 
     crops = [img]
     if cfg.get("group", True):
-        s, found = step_group(img, mask, min_area_frac=cfg.get("min_area_frac", 0.04))
+        s, found = step_group(img, mask, min_area_frac=cfg.get("min_area_frac", 0.005))
         steps.append(s)
         if found:
             crops = found

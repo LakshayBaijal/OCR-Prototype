@@ -37,9 +37,17 @@ from .types import OCRLine, OCRResult
 
 HOST = "http://127.0.0.1:8080"
 
-# Whatever the server was started with. Qwen2.5-VL is currently BROKEN under mlx_vlm.server
-# ("RuntimeError: There is no Stream(gpu, 2) in current thread" - its rope code touches the
-# GPU from the server's worker thread). Gemma-3 takes a different path and serves fine.
+# The model to REQUEST. mlx_vlm.server supports several cached models and lazy-swaps
+# between them per-request (unload the current one, load the requested one) - so this is
+# not "whatever the server happened to start with", it is a genuine choice, and changing it
+# is enough to switch models with zero other code changes.
+#
+# The entire Qwen-VL family is BROKEN under mlx_vlm.server: both Qwen2.5-VL-3B and
+# Qwen3-VL-4B crash mid-generation with "RuntimeError: There is no Stream(gpu, N) in current
+# thread", from the identical get_rope_index() code path in qwen2_5_vl/language.py and
+# qwen3_vl/language.py - a shared bug in mlx-vlm's threading model, not one model version.
+# Confirmed on both; do not retry Qwen-VL here until mlx-vlm fixes it upstream.
+# Gemma-3 is the only VLM family confirmed to serve correctly on this setup.
 MODEL = "mlx-community/gemma-3-4b-it-4bit"
 
 PROMPT = (
@@ -49,22 +57,17 @@ PROMPT = (
 
 
 def served_model() -> str | None:
-    """Which model to ask for, confirmed against what the server advertises.
-
-    /v1/models lists every model in the HF cache, not just the loaded one, so picking the
-    last id would be a coin flip. Prefer MODEL when the server knows about it; only fall
-    back to the first id otherwise.
+    """The model this adapter will REQUEST (not "whatever the server advertises" - /v1/models
+    lists every model ever cached to disk, since mlx_vlm.server supports lazy-swapping
+    between several; it is not a live "currently loaded" indicator). Returns None only if
+    the server itself is unreachable.
     """
     try:
         with urllib.request.urlopen(f"{HOST}/v1/models", timeout=2) as r:
-            data = json.loads(r.read())
-        ids = [m["id"] for m in data.get("data", [])]
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError):
+            json.loads(r.read())  # just prove the server responds; ignore its contents
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
         return None
-
-    if not ids:
-        return None
-    return MODEL if MODEL in ids else ids[0]
+    return MODEL
 
 
 def available() -> bool:

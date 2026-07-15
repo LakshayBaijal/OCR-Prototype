@@ -9,6 +9,18 @@ it, before a single pixel reaches the OCR engine.
 
 from __future__ import annotations
 
+import os
+
+# Must be set before pyarrow's C++ library loads (Arrow reads this exactly once, at first
+# load) - so this has to come before `import pandas`, which pulls pyarrow in transitively.
+# Without it, this machine segfaults (SIGSEGV in libarrow's mi_thread_init/mi_heap_main -
+# confirmed via 3 identical macOS crash reports, same address, same thread, same stack)
+# on Streamlit's own pandas -> pyarrow DataFrame serialization, on Python 3.14 + pyarrow
+# 25.0.0. This forces Arrow to use the plain system allocator instead of its bundled
+# mimalloc, sidestepping the crashing code path entirely. Known, documented Arrow env var:
+# https://arrow.apache.org/docs/cpp/env_vars.html
+os.environ.setdefault("ARROW_DEFAULT_MEMORY_POOL", "system")
+
 import random
 from pathlib import Path
 
@@ -17,6 +29,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+import barcode
+import memguard
 from evaluate_ocr import found
 from ocr import router
 from ocr.types import OCRResult
@@ -113,7 +127,9 @@ cfg["min_side"], cfg["max_side"] = st.sidebar.slider(
     "Resolution band (px)", 300, 3000, (900, 2200), 50
 )
 cfg["min_area_frac"] = st.sidebar.slider(
-    "Grouping: min instance area (frac of image)", 0.01, 0.30, 0.04, 0.01
+    "Grouping: min instance area (frac of image)", 0.002, 0.30, 0.005, 0.001,
+    help="How small a foreground block can be and still get its own OCR crop. Too high "
+         "and small-but-real content (a barcode, an FSSAI number) gets silently dropped.",
 )
 
 # ---------------------------------------------------------------- run
@@ -189,15 +205,76 @@ with stage1:
     if not st.button("Run OCR", type="primary", width="stretch"):
         st.stop()
 
+    # This machine has crashed before - silently, no traceback, process just gone - from
+    # the MLX server (3-4GB resident) plus Streamlit/RapidOCR running at once and the OS
+    # OOM-killing something. Check actual free memory before doing more work rather than
+    # find out the hard way again.
+    free_gb = memguard.free_memory_gb()
+    if free_gb is not None and free_gb < 4.0:
+        vlm_note = " The local VLM tier is on, which talks to the MLX server - the exact " \
+            "combination that's crashed before." if use_vlm else ""
+        st.warning(
+            f"⚠️ Only ~{free_gb:.1f} GB free system memory.{vlm_note} "
+            "Close some apps (or stop the MLX server if it's running) before continuing, "
+            "or proceed at your own risk."
+        )
+        if free_gb < 2.0 and not st.checkbox(
+            "I understand the risk - run anyway", value=False, key="mem_override"
+        ):
+            st.stop()
+
     # union_free_tiers mirrors use_vlm: when the VLM tier is on, merge its text with
     # rapidocr's rather than treating it as an escalate-only fallback. This is the policy
     # decided after the Hindi test - rapidocr and the VLM fail on different things on the
     # same image, so merging strictly beats picking one.
     policy = router.Policy(allow_paid=allow_paid, use_local_vlm=use_vlm, union_free_tiers=use_vlm)
 
-    for idx, crop in enumerate(crops, 1):
-        result = router.read(crop, policy)
+    results = [router.read(crop, policy) for crop in crops]
+    union_text = "\n".join(r.text for r in results if r.text)
 
+    # Barcode is a whole-PHOTO signal, not a per-crop one - there's one barcode per product,
+    # not one per split-out panel. cv2's bar detector needs full scene context to LOCATE the
+    # barcode before it can decode it: confirmed directly that it decodes fine on the raw
+    # photo but fails on a tight single-item crop regardless of padding, and separately fails
+    # once the backdrop is flattened to white (that removes the contrast boundary it uses to
+    # localise scale). So it runs here against the image as it stood right before background
+    # removal - oriented/deskewed/normalised, but still with real surrounding context and
+    # original colours - never against a split crop.
+    names = [s.name for s in steps]
+    bg_idx = names.index("Discard Background") if "Discard Background" in names else None
+    bc_image = steps[bg_idx - 1].image if bg_idx else steps[0].image
+    bc = barcode.read_and_validate(bc_image, union_text)
+
+    st.subheader("Barcode (whole photo)")
+    bcol1, bcol2 = st.columns([1, 2])
+    bc_crop = barcode.crop_region(bc_image, bc.points)
+    if bc_crop is not None:
+        bcol1.image(bc_crop, caption="Detected bars", width="stretch")
+    elif bc.code:
+        bcol1.caption("(no visual crop — code came from OCR digit text, not a bar detection)")
+    else:
+        bcol1.caption("No barcode found in this photo.")
+    if bc.code:
+        bcol2.code(bc.code, language=None)
+        if not bc.valid_checksum:
+            bcol2.error("Checksum INVALID — not looked up.")
+        else:
+            bcol2.success("Checksum valid.")
+            if bc.text_match is not None:
+                label = "✅ matches OCR text" if bc.text_match_ok else "⚠️ weak match with OCR text"
+                bcol2.metric("Barcode ↔ OCR text match", f"{bc.text_match:.0%}", label)
+            if bc.looked_up:
+                bcol2.write(f"**{bc.canonical_brand or '—'}** · {bc.canonical_name or '—'}")
+                bcol2.caption(f"Source: {bc.lookup_source}")
+                if bc.brand_match is not None:
+                    bcol2.caption(f"Brand cross-check vs OCR: {bc.brand_match:.0%}")
+            else:
+                bcol2.caption("Not found in Open Food Facts or UPCitemdb.")
+    with st.expander("Barcode trail", expanded=False):
+        for t in bc.trail:
+            st.write(f"- {t}")
+
+    for idx, (crop, result) in enumerate(zip(crops, results), 1):
         st.divider()
         st.subheader(f"Crop {idx} — engine: `{result.engine}`")
 

@@ -1,3 +1,6 @@
+
+
+
 """Best-effort free-memory check (macOS), used to warn before a run that could get the
 whole process OOM-killed - the exact failure mode already hit twice on this machine: the
 MLX server (3-4GB resident) plus Streamlit/RapidOCR running at once, with no in-app error,

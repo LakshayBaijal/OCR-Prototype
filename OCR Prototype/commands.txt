@@ -1,3 +1,10 @@
+# ---------------------------------------------------------------- Setup (one-time)
+# Barcode decoding uses TWO decoders - cv2 (bundled) and ZBar (better; catches bars cv2
+# misses or misdecodes outright). ZBar needs its native library installed system-wide:
+#     brew install zbar
+# Optional: barcode.py falls back to cv2-only if this isn't installed. `pip install pyzbar`
+# (in requirements.txt) is the Python wrapper; brew installs the C library it wraps.
+
 # ---------------------------------------------------------------- Stage 0 + 1 UI
 streamlit run app.py
 
@@ -26,15 +33,66 @@ venv/bin/python -m mlx_vlm.server \
     --port 8080 --kv-bits 8 --max-tokens 512
 
 
-# ---------------------------------------------------------------- Benchmarks
-# Field recall + escalation rate + preprocessed-vs-raw (RapidOCR only, fast)
-venv/bin/python evaluate_ocr.py --n 60
 
-# Same, but with the free local VLM tier enabled (needs the server above)
-venv/bin/python evaluate_ocr.py --n 60 --vlm
 
-# RapidOCR vs local VLM, head-to-head on the images RapidOCR struggles with
-venv/bin/python compare_engines.py --n 12
+- Evaluations
 
-# Is 40% field recall the engine's fault, or how we feed it? (tiling / thresholds)
+Step 1 — no server needed (run these now):
+
+
+cd "/Users/lakshay.baijal/Desktop/Projects/OCR Prototype"
+
+# Context first: what's the recall CEILING (what's photographed at all)?
+venv/bin/python ceiling.py --n 200
+
+# Headline: does Stage 0 preprocessing beat raw? Field recall vs GT, RapidOCR.
+venv/bin/python evaluate_ocr.py --n 200
+
+# Is low recall the engine or the feeding? (FSSAI probe)
 venv/bin/python tune_ocr.py
+
+# Barcode pipeline end-to-end vs GT UPC/EAN
+
+Step 2 — start the MLX VLM server once (own terminal, leave it running):
+
+
+venv/bin/python -m mlx_vlm.server \
+    --model mlx-community/gemma-3-4b-it-4bit \
+    --port 8080 --kv-bits 8 --max-tokens 512
+Step 3 — with the server up (the full engine comparison):
+
+
+cd "/Users/lakshay.baijal/Desktop/Projects/OCR Prototype"
+
+# Every free engine head-to-head vs GT: rapidocr / easyocr / local_vlm / union
+venv/bin/python benchmark_models.py --n 100
+
+# Same, on RAW images — proves Stage 0 earns its keep
+venv/bin/python benchmark_models.py --n 100 --raw
+
+# Field recall WITH the union VLM tier on
+venv/bin/python evaluate_ocr.py --n 200 --vlm
+
+# RapidOCR vs VLM on the images RapidOCR struggles with
+venv/bin/python compare_engines.py --n 200
+
+
+
+
+
+# ---------------------------------------------------------------- Stage 2 (Layout / Field Parser)
+# Turns Stage-1 OCR (text + boxes + confidence) + the decoded barcode into the structured
+# ProductExtraction schema (Brand / MRP / Net Qty / FSSAI / UPC / Manufacturer / Country / Name).
+#
+# The heuristic (regex + layout) parser works with NO training. Score it vs Ground Truth.csv:
+venv/bin/python eval_stage2.py --n 100
+venv/bin/python eval_stage2.py --n 100 --vlm        # union the local VLM into Stage-1 OCR first
+
+# ---- Optional LayoutLMv3 tier ----
+# microsoft/layoutlmv3-base has NO product-field head, so it must be FINE-TUNED first. We have
+# no token labels, so training uses WEAK SUPERVISION (aligns GT field values onto OCR tokens).
+# 1) Train (writes layoutlmv3_finetuned/). Smoke-test the whole loop first:
+venv/bin/python train_layoutlm.py --n 20 --epochs 1          # fast end-to-end check
+venv/bin/python train_layoutlm.py --n 300 --epochs 3         # a real run
+# 2) Then evaluate WITH the LayoutLMv3 tier merged in on top of the heuristic parser:
+venv/bin/python eval_stage2.py --n 100 --layoutlm

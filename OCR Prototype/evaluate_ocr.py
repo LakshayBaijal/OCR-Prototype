@@ -22,14 +22,23 @@ Usage:  venv/bin/python evaluate_ocr.py --n 60
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import warnings
 from pathlib import Path
+
+# Benchmarks run Stage 0 with the FAST heuristic segmenter, NOT the BiRefNet matte
+# (~10s/image), so a 200-product run finishes in minutes instead of hours. The matte is a
+# crop-QUALITY improvement for the app (stops it damaging glossy packs); it does not
+# materially change OCR field recall - measured ~equal. Set BGREMOVE=1 to benchmark the exact
+# app pipeline instead. (setdefault: an explicit BGREMOVE=1 in the environment still wins.)
+os.environ.setdefault("BGREMOVE", "0")
 
 warnings.filterwarnings("ignore")
 
 import pandas as pd
 
+import products
 from json_metrics import _norm
 from ocr import router
 from ocr.types import OCRResult
@@ -98,6 +107,7 @@ def main(n: int, use_vlm: bool) -> None:
     )
     df = pd.read_csv(ROOT / "Ground Truth.csv", low_memory=False)
     img_cols = [c for c in df.columns if "Filename" in c]
+    all_names = sorted(p.name for p in DATASET.glob("*.jpg"))
 
     sample = df.sample(n=min(n, len(df)), random_state=7)
 
@@ -106,11 +116,12 @@ def main(n: int, use_vlm: bool) -> None:
     escalated_files: list[str] = []
 
     for _, row in sample.iterrows():
-        paths = [
-            DATASET / str(row[c]).strip()
-            for c in img_cols
-            if isinstance(row[c], str) and (DATASET / str(row[c]).strip()).exists()
-        ]
+        names = products.group_for(
+            [str(row[c]).strip() for c in img_cols
+             if isinstance(row[c], str) and str(row[c]).strip()],
+            all_names,
+        )
+        paths = [DATASET / n for n in names if (DATASET / n).exists()]
         if not paths:
             continue
 
@@ -143,6 +154,8 @@ def main(n: int, use_vlm: bool) -> None:
     print(f"\n{'='*70}")
     tiers = "rapidocr UNION local VLM" if use_vlm else "rapidocr only"
     print(f"OCR BENCHMARK - {len(sample)} products, {total_imgs} images, free ({tiers})")
+    seg = "BiRefNet matte" if os.environ.get("BGREMOVE") != "0" else "fast heuristic (BGREMOVE=0)"
+    print(f"Stage-0 segmenter: {seg}")
     print(f"{'='*70}\n")
 
     print("1. FIELD RECALL - can we still find what we know is printed on the pack?")
@@ -187,4 +200,6 @@ if __name__ == "__main__":
     ap.add_argument("--vlm", action="store_true",
                     help="enable the free local-VLM tier (slow; ~4GB model download)")
     a = ap.parse_args()
-    main(a.n, a.vlm)
+    import evaluation
+    with evaluation.capture("evaluate_ocr"):
+        main(a.n, a.vlm)

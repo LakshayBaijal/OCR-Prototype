@@ -96,4 +96,6 @@ def main(n: int) -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=12)
-    main(ap.parse_args().n)
+    import evaluation
+    with evaluation.capture("compare_engines"):
+        main(ap.parse_args().n)

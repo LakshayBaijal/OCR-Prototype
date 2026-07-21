@@ -24,6 +24,8 @@ import numpy as np
 import pandas as pd
 from rapidocr import RapidOCR
 
+import products
+from ocr.rapid import _quiet_rapidocr
 from preprocessing import load_rgb
 
 ROOT = Path(__file__).parent
@@ -58,17 +60,19 @@ def read_tiled(engine: RapidOCR, rgb: np.ndarray, grid: int = 2, overlap: float 
 def main() -> None:
     df = pd.read_csv(ROOT / "Ground Truth.csv", low_memory=False)
     cols = [c for c in df.columns if "Filename" in c]
+    all_names = sorted(p.name for p in DATASET.glob("*.jpg"))
 
     cases: list[tuple[str, list[Path]]] = []
     for _, row in df.sample(n=200, random_state=5).iterrows():
         f = str(row.get("Fssai No", "")).strip()
         if not f.isdigit() or len(f) < 10:
             continue
-        imgs = [
-            DATASET / str(row[c]).strip()
-            for c in cols
-            if isinstance(row[c], str) and (DATASET / str(row[c]).strip()).exists()
-        ]
+        names = products.group_for(
+            [str(row[c]).strip() for c in cols
+             if isinstance(row[c], str) and str(row[c]).strip()],
+            all_names,
+        )
+        imgs = [DATASET / n for n in names if (DATASET / n).exists()]
         if imgs:
             cases.append((f, imgs))
         if len(cases) >= 20:
@@ -84,6 +88,7 @@ def main() -> None:
         "Det.unclip_ratio": 2.0,
         "Global.text_score": 0.3,
     })
+    _quiet_rapidocr()  # both constructions reset RapidOCR's logger to INFO; silence it here
 
     setups = {
         "baseline (default)": lambda rgb: read(base, rgb),
@@ -111,4 +116,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import evaluation
+    with evaluation.capture("tune_ocr"):
+        main()

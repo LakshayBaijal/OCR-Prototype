@@ -28,9 +28,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import time
 import warnings
 from pathlib import Path
+
+# Fast heuristic Stage-0 segmenter by default (not the ~10s/image BiRefNet matte), so runs
+# finish in minutes. Set BGREMOVE=1 to use the model. See evaluate_ocr.py for the rationale.
+os.environ.setdefault("BGREMOVE", "0")
 
 warnings.filterwarnings("ignore")
 
@@ -48,6 +53,7 @@ ssl._create_default_https_context = lambda *a, **k: ssl.create_default_context(
     cafile=certifi.where()
 )
 
+import products
 from ceiling import has_panel
 from evaluate_ocr import FIELDS, found
 from ocr import local_vlm, rapid
@@ -126,6 +132,7 @@ ENGINES = {
 def main(n: int, raw: bool, only: list[str] | None) -> None:
     df = pd.read_csv(ROOT / "Ground Truth.csv", low_memory=False)
     cols = [c for c in df.columns if "Filename" in c]
+    all_names = sorted(p.name for p in DATASET.glob("*.jpg"))
     sample = df.sample(n=min(n, len(df)), random_state=7)
 
     names = only or list(ENGINES)
@@ -136,11 +143,12 @@ def main(n: int, raw: bool, only: list[str] | None) -> None:
     n_prod = 0
 
     for _, row in sample.iterrows():
-        paths = [
-            DATASET / str(row[c]).strip()
-            for c in cols
-            if isinstance(row[c], str) and (DATASET / str(row[c]).strip()).exists()
-        ]
+        img_names = products.group_for(
+            [str(row[c]).strip() for c in cols
+             if isinstance(row[c], str) and str(row[c]).strip()],
+            all_names,
+        )
+        paths = [DATASET / n for n in img_names if (DATASET / n).exists()]
         if not paths:
             continue
         n_prod += 1
@@ -209,4 +217,6 @@ if __name__ == "__main__":
     ap.add_argument("--raw", action="store_true", help="skip Stage 0 preprocessing")
     ap.add_argument("--only", nargs="*", help=f"subset of: {list(ENGINES)}")
     a = ap.parse_args()
-    main(a.n, a.raw, a.only)
+    import evaluation
+    with evaluation.capture("benchmark_models"):
+        main(a.n, a.raw, a.only)

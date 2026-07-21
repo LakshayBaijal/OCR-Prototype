@@ -36,6 +36,7 @@ warnings.filterwarnings("ignore")
 
 import pandas as pd
 
+import products
 from evaluate_ocr import found
 from ocr import cache, router
 from preprocessing import load_rgb
@@ -63,24 +64,26 @@ def has_panel(text: str) -> bool:
 def main(n: int) -> None:
     df = pd.read_csv(ROOT / "Ground Truth.csv", low_memory=False)
     cols = [c for c in df.columns if "Filename" in c]
+    all_names = sorted(p.name for p in DATASET.glob("*.jpg"))
     sample = df.sample(n=min(n, len(df)), random_state=7)
 
     listed = distinct = 0
     with_panel = 0
-    products = 0
+    n_products = 0
 
     # per field: recoverable (panel present) vs actually recovered
     stat = {f: {"gt": 0, "reachable": 0, "got": 0} for f in PANEL_FIELDS + FRONT_FIELDS}
 
     for _, row in sample.iterrows():
-        paths = [
-            DATASET / str(row[c]).strip()
-            for c in cols
-            if isinstance(row[c], str) and (DATASET / str(row[c]).strip()).exists()
-        ]
+        names = products.group_for(
+            [str(row[c]).strip() for c in cols
+             if isinstance(row[c], str) and str(row[c]).strip()],
+            all_names,
+        )
+        paths = [DATASET / n for n in names if (DATASET / n).exists()]
         if not paths:
             continue
-        products += 1
+        n_products += 1
 
         # 1. how many of these images are actually DIFFERENT pictures?
         seen: set[str] = set()
@@ -108,7 +111,7 @@ def main(n: int) -> None:
             stat[f]["got"] += bool(got)
 
     print(f"\n{'='*74}")
-    print(f"RECALL CEILING - what is even POSSIBLE from these photos?  ({products} products)")
+    print(f"RECALL CEILING - what is even POSSIBLE from these photos?  ({n_products} products)")
     print(f"{'='*74}\n")
 
     print("1. ARE THE 3-5 IMAGES PER PRODUCT ACTUALLY DIFFERENT PICTURES?")
@@ -117,9 +120,9 @@ def main(n: int) -> None:
     print(f"   -> {listed - distinct} are exact duplicates of another image of the same product")
 
     print(f"\n2. WAS THE INFORMATIVE (BACK) PANEL EVER PHOTOGRAPHED?")
-    print(f"   products with a back panel visible: {with_panel}/{products} "
-          f"({with_panel/products*100:.0f}%)")
-    print(f"   -> for the other {products - with_panel}, MRP / FSSAI / barcode / manufacturer")
+    print(f"   products with a back panel visible: {with_panel}/{n_products} "
+          f"({with_panel/n_products*100:.0f}%)")
+    print(f"   -> for the other {n_products - with_panel}, MRP / FSSAI / barcode / manufacturer")
     print(f"      are NOT IN ANY IMAGE. No OCR engine can ever recover them.")
 
     print(f"\n3. RECALL vs THE CEILING (not vs 100%)")
@@ -142,4 +145,6 @@ def main(n: int) -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=60)
-    main(ap.parse_args().n)
+    import evaluation
+    with evaluation.capture("ceiling"):
+        main(ap.parse_args().n)

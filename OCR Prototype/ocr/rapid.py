@@ -16,9 +16,20 @@ import numpy as np
 
 from .types import OCRLine, OCRResult
 
-logging.getLogger("RapidOCR").setLevel(logging.WARNING)
-
 _engine = None
+
+
+def _quiet_rapidocr() -> None:
+    """Silence RapidOCR's own logging.
+
+    RapidOCR resets its "RapidOCR" logger to INFO *and* attaches its own stderr handler
+    during `RapidOCR()` construction, so setting the level at import time is clobbered the
+    moment an engine is built. It has to be re-applied AFTER construction. Left alone it
+    prints a `text detection result is empty` WARNING for every blank crop - thousands of
+    lines on a full benchmark, burying the actual report. An empty detection is normal here
+    (blank/backdrop crops), so ERROR is the right floor.
+    """
+    logging.getLogger("RapidOCR").setLevel(logging.ERROR)
 
 
 def _get_engine():
@@ -27,7 +38,17 @@ def _get_engine():
     if _engine is None:
         from rapidocr import RapidOCR
 
-        _engine = RapidOCR()
+        # RapidOCR logs each model it loads at INFO *from inside* its constructor - before
+        # _quiet_rapidocr() below could ever run. Disable INFO globally just for the
+        # construction window (restoring whatever was set before) so those startup lines
+        # don't print either; WARNING+ still passes through.
+        prev_disable = logging.root.manager.disable
+        logging.disable(logging.INFO)
+        try:
+            _engine = RapidOCR()
+        finally:
+            logging.disable(prev_disable)
+        _quiet_rapidocr()
     return _engine
 
 

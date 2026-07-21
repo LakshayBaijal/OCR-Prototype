@@ -1,10 +1,18 @@
 """
-Stage 0 - Preprocessing visualiser.
+Stage 0 - Preprocessing visualiser (product-level).
 
 Run:  .venv/bin/streamlit run app.py
 
-Pick any image from the Dataset and inspect what every preprocessing step does to
-it, before a single pixel reaches the OCR engine.
+Pick any image from the Dataset and the app automatically pulls in every OTHER image of
+the same product - front, back, side panels - because they belong together: the barcode
+token in the filename (`Image_<view>_<barcode>.0.jpg`) is shared across a product's shots,
+and that is exactly what the ground-truth CSV groups on. You never have to add the
+associated images by hand.
+
+Everything downstream is then scored per PRODUCT, not per image, which is the only honest
+way: the FSSAI number lives on one face, the MRP on another, so a single shot can never
+hold them all. Stage 1 OCR text, the barcode, and field recall are all unioned across the
+whole product.
 """
 
 from __future__ import annotations
@@ -31,6 +39,7 @@ import streamlit as st
 
 import barcode
 import memguard
+import products
 from evaluate_ocr import found
 from ocr import router
 from ocr.types import OCRResult
@@ -51,10 +60,47 @@ def draw_boxes(rgb: np.ndarray, result: OCRResult) -> np.ndarray:
         cv2.polylines(vis, [np.array(line.bbox, np.int32)], True, colour, 2)
     return vis
 
+
+def barcode_source_image(steps: list) -> np.ndarray:
+    """The image the barcode reader should see: oriented/deskewed/normalised but BEFORE
+    background removal, so the bar detector keeps the surrounding contrast it localises on.
+    Mirrors the reasoning in the module docstring of barcode.py."""
+    names = [s.name for s in steps]
+    bg_idx = names.index("Crop to Product") if "Crop to Product" in names else None
+    return steps[bg_idx - 1].image if bg_idx else steps[0].image
+
+
+def render_steps(steps: list) -> None:
+    """Render the full step-by-step Stage 0 breakdown for ONE image (before / after / debug
+    overlay per step). Called once per image in the product so every shot's preprocessing
+    is visible, not just the selected one."""
+    for i, step in enumerate(steps):
+        badge = "✅ applied" if step.changed else "➖ no change"
+        st.divider()
+        st.subheader(f"{i}. {step.name}  ·  {badge}")
+        st.write(step.note)
+
+        before = steps[i - 1].image if i else None
+        cols = st.columns(3 if step.debug is not None else (2 if before is not None else 1))
+
+        c = 0
+        if before is not None:
+            cols[c].image(before, caption=f"Before — {before.shape[1]}×{before.shape[0]}", width="stretch")
+            c += 1
+        cols[c].image(step.image, caption=f"After — {step.image.shape[1]}×{step.image.shape[0]}", width="stretch")
+        c += 1
+        if step.debug is not None:
+            cols[c].image(step.debug, caption="What the step detected", width="stretch")
+
+        if step.info:
+            st.json(step.info, expanded=False)
+
+
 GT_FIELDS = [
     "Product Name", "Brand", "Mrp", "Net Quantity", "Product Quantity",
     "Upc / Ean", "Fssai No", "Manufacturer", "Country Of Origin", "Product Type Name",
 ]
+RECALL_FIELDS = ["Brand", "Mrp", "Net Quantity", "Fssai No", "Upc / Ean", "Manufacturer"]
 
 st.set_page_config(page_title="Stage 0 - Preprocessing", layout="wide")
 
@@ -62,6 +108,20 @@ st.set_page_config(page_title="Stage 0 - Preprocessing", layout="wide")
 @st.cache_data(show_spinner=False)
 def list_images() -> list[str]:
     return sorted(p.name for p in DATASET.glob("*.jpg"))
+
+
+@st.cache_data(show_spinner=False)
+def group_index() -> dict[str, list[str]]:
+    """product key -> its image filenames, view-ordered. Built once over the listing."""
+    return products.group_index(list_images())
+
+
+@st.cache_data(show_spinner="Preprocessing (background matte ~10s/image, first time only)…")
+def run_pipeline_cached(name: str, cfg_items: tuple):
+    """Stage 0 for one image, cached on (filename, config) so switching the inspected image
+    or toggling a Stage 1 checkbox does not re-run preprocessing for the whole product. The
+    background matte (BiRefNet) is the slow part on a cold cache; it is cached to disk too."""
+    return run_pipeline(str(DATASET / name), dict(cfg_items))
 
 
 @st.cache_data(show_spinner=False)
@@ -87,7 +147,7 @@ gt = ground_truth_index()
 # ---------------------------------------------------------------- sidebar
 
 st.sidebar.title("Stage 0 - Preprocessing")
-st.sidebar.caption(f"{len(images):,} images in Dataset/")
+st.sidebar.caption(f"{len(images):,} images · {len(group_index()):,} products in Dataset/")
 
 query = st.sidebar.text_input("Filter by filename / barcode", placeholder="e.g. 8901030834691")
 matches = [n for n in images if query in n] if query else images
@@ -109,6 +169,16 @@ choice = st.sidebar.selectbox(
     index=options.index(st.session_state.choice) if st.session_state.get("choice") in options else 0,
 )
 
+# Every image of the same product, auto-included. This is the whole point: you pick one
+# shot, the app reads the entire product.
+group = products.associated(choice, images)
+st.sidebar.divider()
+st.sidebar.subheader(f"Product group · {len(group)} images")
+st.sidebar.caption("Auto-included from the same barcode — you don't add these by hand.")
+for name in group:
+    marker = "👉 " if name == choice else "     "
+    st.sidebar.write(f"{marker}`{name}`")
+
 st.sidebar.divider()
 st.sidebar.subheader("Steps")
 cfg = {
@@ -116,7 +186,7 @@ cfg = {
     "deskew": st.sidebar.checkbox("Deskew", True),
     "normalise": st.sidebar.checkbox("Normalisation", True),
     "resolution": st.sidebar.checkbox("Resolution Band", True),
-    "background": st.sidebar.checkbox("Discard Background", True),
+    "background": st.sidebar.checkbox("Crop to Product", True),
     "group": st.sidebar.checkbox("Multi-Image Grouping", True),
 }
 
@@ -132,19 +202,28 @@ cfg["min_area_frac"] = st.sidebar.slider(
          "and small-but-real content (a barcode, an FSSAI number) gets silently dropped.",
 )
 
-# ---------------------------------------------------------------- run
+# ---------------------------------------------------------------- run Stage 0 for the group
 
-path = DATASET / choice
-steps, crops = run_pipeline(str(path), cfg)
+cfg_key = tuple(sorted(cfg.items()))
+group_steps: dict[str, list] = {}
+group_crops: dict[str, list[np.ndarray]] = {}
+for name in group:
+    steps_i, crops_i = run_pipeline_cached(name, cfg_key)
+    group_steps[name] = steps_i
+    group_crops[name] = crops_i
 
-record = gt.get(choice)
+# The product row is shared by every image in the group; take it from whichever has one.
+record = next((gt.get(n) for n in group if gt.get(n)), None)
 
 stage0, stage1 = st.tabs(["Stage 0 · Preprocessing", "Stage 1 · OCR"])
 
 # ================================================================ Stage 0
 
 with stage0:
-    st.caption(f"`{choice}` — every step below is shown before it is handed to the OCR engine.")
+    st.caption(
+        f"Product **`{products.product_key(choice) or choice}`** — "
+        f"{len(group)} associated images, auto-grouped and read together."
+    )
 
     if record:
         with st.expander("📋 Ground truth for this product", expanded=False):
@@ -157,39 +236,36 @@ with stage0:
                 ).set_index("Field")
             )
     else:
-        st.info("No ground-truth row found for this filename.")
+        st.info("No ground-truth row found for this product.")
 
-    for i, step in enumerate(steps):
-        badge = "✅ applied" if step.changed else "➖ no change"
-        st.divider()
-        st.subheader(f"{i}. {step.name}  ·  {badge}")
-        st.write(step.note)
-
-        before = steps[i - 1].image if i else None
-        cols = st.columns(3 if step.debug is not None else (2 if before is not None else 1))
-
-        c = 0
-        if before is not None:
-            cols[c].image(before, caption=f"Before — {before.shape[1]}×{before.shape[0]}", width="stretch")
-            c += 1
-        cols[c].image(step.image, caption=f"After — {step.image.shape[1]}×{step.image.shape[0]}", width="stretch")
-        c += 1
-        if step.debug is not None:
-            cols[c].image(step.debug, caption="What the step detected", width="stretch")
-
-        if step.info:
-            st.json(step.info, expanded=False)
+    st.markdown("**Preprocessing steps — every image in the product**")
+    st.caption(
+        "One tab per image; each runs the full Stage 0 pipeline. 👉 marks the image you "
+        "picked. All of them feed Stage 1."
+    )
+    img_tabs = st.tabs([
+        ("👉 " if name == choice else "") + f"Image {products.view_number(name)}"
+        for name in group
+    ])
+    for tab, name in zip(img_tabs, group):
+        with tab:
+            st.caption(f"`{name}`")
+            render_steps(group_steps[name])
 
     st.divider()
-    st.header(f"➡️ Output to OCR — {len(crops)} image{'s' if len(crops) != 1 else ''}")
-    st.caption("These are the exact pixels Stage 1 (OCR) will receive.")
-    for col, crop in zip(st.columns(min(len(crops), 4)), crops):
-        col.image(crop, caption=f"{crop.shape[1]}×{crop.shape[0]}", width="stretch")
+    total_crops = sum(len(c) for c in group_crops.values())
+    st.header(f"➡️ Output to OCR — {total_crops} image{'s' if total_crops != 1 else ''} across the product")
+    st.caption("These are the exact pixels Stage 1 (OCR) will receive, grouped by source image.")
+    for name in group:
+        crops = group_crops[name]
+        st.markdown(f"**`{name}`** — {len(crops)} crop{'s' if len(crops) != 1 else ''}")
+        for col, crop in zip(st.columns(min(len(crops), 4)), crops):
+            col.image(crop, caption=f"{crop.shape[1]}×{crop.shape[0]}", width="stretch")
 
 # ================================================================ Stage 1
 
 with stage1:
-    st.caption("Cheapest-first routing. Paid engines stay off unless you switch them on.")
+    st.caption("Cheapest-first routing, unioned across the whole product. Paid engines stay off unless switched on.")
 
     allow_paid = st.checkbox(
         "💸 Allow paid engines (Google Vision / Claude)", value=False,
@@ -229,23 +305,39 @@ with stage1:
     # same image, so merging strictly beats picking one.
     policy = router.Policy(allow_paid=allow_paid, use_local_vlm=use_vlm, union_free_tiers=use_vlm)
 
-    results = [router.read(crop, policy) for crop in crops]
+    # Every crop of every image in the product, tagged with which image it came from.
+    indexed = [
+        (name, i, crop)
+        for name in group
+        for i, crop in enumerate(group_crops[name], 1)
+    ]
+    results = [router.read(crop, policy) for (_, _, crop) in indexed]
     union_text = "\n".join(r.text for r in results if r.text)
 
-    # Barcode is a whole-PHOTO signal, not a per-crop one - there's one barcode per product,
-    # not one per split-out panel. cv2's bar detector needs full scene context to LOCATE the
-    # barcode before it can decode it: confirmed directly that it decodes fine on the raw
-    # photo but fails on a tight single-item crop regardless of padding, and separately fails
-    # once the backdrop is flattened to white (that removes the contrast boundary it uses to
-    # localise scale). So it runs here against the image as it stood right before background
-    # removal - oriented/deskewed/normalised, but still with real surrounding context and
-    # original colours - never against a split crop.
-    names = [s.name for s in steps]
-    bg_idx = names.index("Discard Background") if "Discard Background" in names else None
-    bc_image = steps[bg_idx - 1].image if bg_idx else steps[0].image
-    bc = barcode.read_and_validate(bc_image, union_text)
+    # ---- Barcode: a whole-product signal. It lives on ONE face, so decode each image and
+    # keep the strongest hit (an actual bar decode beats an OCR-digit fallback). The digit
+    # cross-check uses the product-wide union text, which is the fullest evidence available.
+    best_bc = best_bc_img = None
+    last_bc = last_bc_img = None
+    best_unverified = None
+    for name in group:
+        bc_img_i = barcode_source_image(group_steps[name])
+        r = barcode.read_and_validate(bc_img_i, union_text)
+        last_bc, last_bc_img = r, bc_img_i
+        if r.code and (best_bc is None or r.source == "bars"):
+            best_bc, best_bc_img = r, bc_img_i
+        if r.unverified_candidate and not best_unverified:
+            best_unverified = r.unverified_candidate
+        if r.source == "bars":
+            break
+    bc = best_bc or last_bc
+    bc_image = best_bc_img if best_bc is not None else last_bc_img
+    # Nothing verified anywhere in the group: surface the best raw candidate seen on ANY of
+    # the product's images, not just whichever image happened to be processed last.
+    if bc.code is None and bc.unverified_candidate is None:
+        bc.unverified_candidate = best_unverified
 
-    st.subheader("Barcode (whole photo)")
+    st.subheader("Barcode (whole product)")
     bcol1, bcol2 = st.columns([1, 2])
     bc_crop = barcode.crop_region(bc_image, bc.points)
     if bc_crop is not None:
@@ -253,7 +345,7 @@ with stage1:
     elif bc.code:
         bcol1.caption("(no visual crop — code came from OCR digit text, not a bar detection)")
     else:
-        bcol1.caption("No barcode found in this photo.")
+        bcol1.caption("No barcode symbol located in any image of this product.")
     if bc.code:
         bcol2.code(bc.code, language=None)
         if not bc.valid_checksum:
@@ -270,13 +362,47 @@ with stage1:
                     bcol2.caption(f"Brand cross-check vs OCR: {bc.brand_match:.0%}")
             else:
                 bcol2.caption("Not found in Open Food Facts or UPCitemdb.")
+    elif bc.unverified_candidate:
+        bcol2.warning(
+            "No barcode could be verified automatically — the bar pattern couldn't be "
+            "decoded and OCR's reading of the printed digits couldn't be confirmed, so this "
+            "was NOT auto-trusted or looked up. It is OCR's best reading of the barcode line "
+            "(it may include a reconstructed leading digit) — a starting point only. "
+            "**Please verify it against the physical barcode.**"
+        )
+        bcol2.code(bc.unverified_candidate, language=None)
+        bcol2.caption("See the 'Barcode trail' below for exactly how this candidate was formed.")
+    else:
+        bcol2.caption("No barcode digits found anywhere in this product's images either.")
     with st.expander("Barcode trail", expanded=False):
         for t in bc.trail:
             st.write(f"- {t}")
 
-    for idx, (crop, result) in enumerate(zip(crops, results), 1):
+    # ---- Product-level field recall: the honest score. Union the OCR text across ALL the
+    # product's images, then look for each ground-truth field. Scoring a single front-of-pack
+    # shot against an FSSAI number that is only on the back would be nonsense.
+    if record:
         st.divider()
-        st.subheader(f"Crop {idx} — engine: `{result.engine}`")
+        st.subheader("Field recall — product-level (union of all images vs ground truth)")
+        hits = []
+        for f in RECALL_FIELDS:
+            got = found(f, record.get(f), union_text)
+            if got is not None:
+                hits.append({"field": f, "expected": str(record.get(f)),
+                             "recovered": "✅" if got else "❌"})
+        if hits:
+            n_ok = sum(1 for h in hits if h["recovered"] == "✅")
+            st.metric("Fields recovered", f"{n_ok} / {len(hits)}")
+            st.dataframe(pd.DataFrame(hits), width="stretch", hide_index=True)
+        else:
+            st.info("No comparable ground-truth fields for this product.")
+
+    # ---- Per-crop detail, grouped by source image.
+    st.divider()
+    st.subheader("Per-crop detail")
+    for (name, i, crop), result in zip(indexed, results):
+        st.divider()
+        st.markdown(f"**`{name}`** · crop {i} — engine: `{result.engine}`")
 
         cost = f"${result.cost_usd:.4f}" if result.cost_usd else "free"
         conf = result.mean_confidence
@@ -288,9 +414,10 @@ with stage1:
 
         left, right = st.columns(2)
         left.image(draw_boxes(crop, result), caption="Green = confident · red = weak", width="stretch")
-        right.text_area("Extracted text", result.text or "(nothing found)", height=340, key=f"t{idx}")
+        right.text_area("Extracted text", result.text or "(nothing found)", height=340,
+                        key=f"t_{name}_{i}")
 
-        with st.expander("Why this engine? (routing trail)", expanded=True):
+        with st.expander("Why this engine? (routing trail)", expanded=False):
             for t in result.trail:
                 st.write(f"- {t}")
 
@@ -303,15 +430,3 @@ with stage1:
                 ]),
                 width="stretch", hide_index=True,
             )
-
-        # Did OCR actually recover what the ground truth says is printed here?
-        if record:
-            hits = []
-            for f in ["Brand", "Mrp", "Net Quantity", "Fssai No", "Upc / Ean", "Manufacturer"]:
-                got = found(f, record.get(f), result.text)
-                if got is not None:
-                    hits.append({"field": f, "expected": str(record.get(f)),
-                                 "recovered": "✅" if got else "❌"})
-            if hits:
-                st.markdown("**Field recall on this crop** (vs ground truth)")
-                st.dataframe(pd.DataFrame(hits), width="stretch", hide_index=True)

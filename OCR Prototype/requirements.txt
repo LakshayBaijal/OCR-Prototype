@@ -3,3 +3,6 @@ pillow>=11.0
 opencv-python-headless>=4.10
 streamlit>=1.40
 pandas>=2.2
+rembg>=2.0    # learned background matte (BiRefNet); optional - pipeline falls back without it
+pyzbar>=0.1.9 # 2nd barcode decoder (ZBar) - needs the native lib too: `brew install zbar`
+              # (macOS). Optional - falls back to cv2-only if zbar isn't installed.

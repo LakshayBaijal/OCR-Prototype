@@ -1,0 +1,41 @@
+# evaluate_ocr
+# run at : 2026-07-21 10:03:39
+# command: evaluate_ocr.py --n 200
+
+
+======================================================================
+OCR BENCHMARK - 200 products, 996 images, free (rapidocr only)
+Stage-0 segmenter: fast heuristic (BGREMOVE=0)
+======================================================================
+
+1. FIELD RECALL - can we still find what we know is printed on the pack?
+   (scored per product: OCR text unioned across its 5 faces)
+
+   field             preprocessed      raw     delta   n
+   --------------------------------------------------------
+   Brand                     80%     80%      -1%   200
+   Mrp                       24%     24%      +1%   200
+   Net Quantity              67%     66%      +1%   200
+   Fssai No                  41%     44%      -3%   131
+   Upc / Ean                 10%     10%      +1%   200
+   Manufacturer              27%     28%      -1%   200
+   --------------------------------------------------------
+   OVERALL                   42%     42%      -0%   1131
+
+2. ESCALATION RATE (prices the paid tier)
+   422/996 images (42%) failed the free tier's quality bar
+   -> at that rate, Google Vision for all 20,746 images would cost $13.18
+
+3. NON-LATIN SCRIPT (do we need Indic support?)
+   205/996 images contained non-Latin characters
+
+4. SAMPLE OF IMAGES THE FREE TIER STRUGGLED ON
+   Image_5_8901063401778.0.jpg
+   Image_1_8901177102301.0.jpg
+   Image_4_8901177102301.0.jpg
+   Image_5_8901177102301.0.jpg
+   Image_5_8901177102301.0.jpg
+   Image_5_8901177102301.0.jpg
+   Image_3_8906059635007.0.jpg
+   Image_3_8906059635007.0.jpg
+

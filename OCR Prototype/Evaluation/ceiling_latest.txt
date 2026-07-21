@@ -1,0 +1,32 @@
+# ceiling
+# run at : 2026-07-21 09:57:34
+# command: ceiling.py --n 200
+
+
+==========================================================================
+RECALL CEILING - what is even POSSIBLE from these photos?  (200 products)
+==========================================================================
+
+1. ARE THE 3-5 IMAGES PER PRODUCT ACTUALLY DIFFERENT PICTURES?
+   images listed in the CSV : 719
+   distinct by pixel hash   : 611   (85%)
+   -> 108 are exact duplicates of another image of the same product
+
+2. WAS THE INFORMATIVE (BACK) PANEL EVER PHOTOGRAPHED?
+   products with a back panel visible: 116/200 (58%)
+   -> for the other 84, MRP / FSSAI / barcode / manufacturer
+      are NOT IN ANY IMAGE. No OCR engine can ever recover them.
+
+3. RECALL vs THE CEILING (not vs 100%)
+   field             in GT  reachable  recovered  raw recall  vs ceiling
+   ----------------------------------------------------------------------
+   Mrp                 200        116         48        24%        41%
+   Fssai No            131         94         58        44%        62%
+   Upc / Ean           200        116         19        10%        16%
+   Manufacturer        200        116         55        28%        47%
+   Brand               200        200        160        80%        80%
+   Net Quantity        200        200        133        66%        66%
+
+   'vs ceiling' = recall counting ONLY products where the value was photographed.
+   That is the number the OCR engine is actually responsible for.
+

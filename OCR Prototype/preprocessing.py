@@ -5,7 +5,7 @@ Each architecture step is a standalone function returning a StepResult so the
 Streamlit app can render the output (and a debug overlay) of every step:
 
     Format Check -> Orientation Fix -> Deskew -> Normalisation
-                 -> Resolution Band -> Discard Background -> Multi-Image Grouping
+                 -> Resolution Band -> Crop to Product -> Multi-Image Grouping
 
 All images are RGB uint8 numpy arrays.
 """
@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 import cv2
 import numpy as np
 from PIL import Image, ImageOps
+
+import bgremove
 
 # Background in this dataset is studio white; treat near-white as background.
 WHITE = (255, 255, 255)
@@ -169,6 +171,51 @@ def segment(
 ) -> tuple[np.ndarray, str]:
     """Mask of the product(s), plus the reason for the verdict.
 
+    Prefers a learned matte (bgremove / BiRefNet) when rembg is installed - it gives a clean
+    silhouette on the glossy / white-on-white / gradient packs the colour heuristic mangles.
+    Falls back to the classical `_heuristic_segment` when the model is unavailable, so the
+    pipeline never hard-depends on it. Either way the mask is only ever used to CROP.
+    """
+    m = bgremove.mask(rgb)
+    if m is not None:
+        return _refine_model_mask(rgb, m, min_area_frac)
+    return _heuristic_segment(rgb, min_area_frac, max_erase_structure)
+
+
+def _refine_model_mask(
+    rgb: np.ndarray, m: np.ndarray, min_area_frac: float
+) -> tuple[np.ndarray, str]:
+    """Tidy a raw model matte into the pipeline's mask contract: fill each product solid so
+    its interior can never hollow out, drop specks, and bail to "keep whole" if the matte is
+    degenerate (near-empty or near-full)."""
+    h, w = rgb.shape[:2]
+    keep_all = np.full((h, w), 255, np.uint8)
+
+    fg = solidify(m)  # fill outlines solid; interior can never be punched through
+
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(fg, 8)
+    cleaned = np.zeros_like(fg)
+    for i in range(1, n):
+        if stats[i, cv2.CC_STAT_AREA] >= min_area_frac * h * w:
+            cleaned[labels == i] = 255
+
+    coverage = float(cleaned.mean() / 255)
+    if coverage < 0.02:
+        return keep_all, f"model matte nearly empty (product {coverage:.1%}); kept whole"
+    if coverage > 0.98:
+        return cleaned, f"model matte: product fills the frame ({coverage:.1%})"
+    return cleaned, f"foreground matte from {bgremove.MODEL} (product {coverage:.1%})"
+
+
+def _heuristic_segment(
+    rgb: np.ndarray,
+    min_area_frac: float = 0.002,
+    max_erase_structure: float = 0.015,
+) -> tuple[np.ndarray, str]:
+    """Classical colour + border-connectivity fallback (used only when rembg is absent).
+
+    Mask of the product(s), plus the reason for the verdict.
+
     Background = pixels close to the learned backdrop colours AND reachable from the image
     border. Border-connectivity keeps a product intact: a white patch enclosed inside a
     pack cannot be reached from the edge, so it stays foreground rather than punching a
@@ -230,7 +277,9 @@ def segment(
 
 
 def foreground_mask(rgb: np.ndarray, min_area_frac: float = 0.002) -> np.ndarray:
-    return segment(rgb, min_area_frac=min_area_frac)[0]
+    # Deskew only needs a rough silhouette to fit a rotated rectangle to, so run the CHEAP
+    # heuristic here, never the heavy model - a deskew must not cost a model inference.
+    return _heuristic_segment(rgb, min_area_frac=min_area_frac)[0]
 
 
 def border_colour(rgb: np.ndarray) -> tuple[int, int, int]:
@@ -438,32 +487,30 @@ def step_resolution(rgb: np.ndarray, min_side: int = 900, max_side: int = 2200) 
 def step_background(
     rgb: np.ndarray, mask: np.ndarray, reason: str, pad: int = 12
 ) -> tuple[StepResult, np.ndarray, np.ndarray]:
-    """Discard background: flatten it to pure white and crop to the product.
+    """Crop to the product (crop-only): trim to the mask's bounding box with a little pad.
 
-    Takes the mask rather than deriving its own, and returns the mask cropped alongside
-    the image so the grouping step can reuse it. Re-deriving it after the crop would be
-    wrong: once cropped tight to the product, the corners ARE the product, so the backdrop
-    model would learn the product's colour and erase it.
+    Deliberately does NOT white-out interior pixels. Earlier versions flattened the
+    background to white, which damaged glossy / white-on-white packs whose mask was slightly
+    off - it overwrote real print - and the Stage-1 benchmark showed white-out did not improve
+    field recall anyway. Cropping is strictly safe: a loose crop keeps a little backdrop, which
+    costs OCR nothing, whereas an erased label is fatal.
+
+    Takes the mask rather than deriving its own, and returns the mask cropped the same way so
+    the grouping step can reuse it.
     """
     h, w = rgb.shape[:2]
     coverage = float(mask.mean() / 255)
 
-    centers, tol = background_model(rgb)
-    backdrop = [tuple(int(v) for v in c) for c in centers]
-
     debug = rgb.copy()
-    debug[mask == 0] = (debug[mask == 0] * 0.25).astype(np.uint8)  # dim what we call background
+    debug[mask == 0] = (debug[mask == 0] * 0.25).astype(np.uint8)  # dim what we'd crop away
 
-    if coverage > 0.98:
+    if coverage <= 0 or coverage > 0.98:
         return (
             StepResult(
-                "Discard Background", rgb, debug=debug,
+                "Crop to Product", rgb, debug=debug,
                 info={
                     "verdict": reason,
                     "foreground_coverage": round(coverage, 3),
-                    "backdrop_colours": backdrop,
-                    "tolerance": round(tol, 1),
-                    "erased_edge_density": round(edge_density(rgb, mask == 0), 4),
                     "applied": False,
                 },
                 note=f"Left untouched — {reason}.",
@@ -472,33 +519,27 @@ def step_background(
             mask,
         )
 
-    flat = rgb.copy()
-    flat[mask == 0] = WHITE
-
     ys, xs = np.where(mask > 0)
     y0, y1 = max(0, ys.min() - pad), min(h, ys.max() + pad)
     x0, x1 = max(0, xs.min() - pad), min(w, xs.max() + pad)
-    out = flat[y0:y1, x0:x1]
+    out = rgb[y0:y1, x0:x1]
 
     return (
         StepResult(
-            name="Discard Background",
+            name="Crop to Product",
             image=out,
             debug=debug,
             info={
                 "verdict": reason,
                 "foreground_coverage": round(coverage, 3),
-                "backdrop_colours": backdrop,
-                "tolerance": round(tol, 1),
-                "erased_edge_density": round(edge_density(rgb, mask == 0), 4),
                 "crop_box": [int(x0), int(y0), int(x1), int(y1)],
                 "from": f"{w} x {h}",
                 "to": f"{out.shape[1]} x {out.shape[0]}",
             },
             changed=True,
             note=(
-                f"Learned backdrop {backdrop[0]}; whited it out and cropped to the product "
-                f"({out.shape[1]}x{out.shape[0]})."
+                f"Cropped to the product ({out.shape[1]}x{out.shape[0]}) — background kept, "
+                "not whited out."
             ),
         ),
         out,

@@ -154,3 +154,36 @@ def read(rgb: np.ndarray, policy: Policy | None = None) -> OCRResult:
 
     best.trail = trail + ["accepted: best available"]
     return best
+
+
+def read_dual(rgb: np.ndarray, policy: Policy | None = None) -> tuple[OCRResult, OCRResult]:
+    """Return (geometry_result, text_result) as TWO SEPARATE results, instead of `read()`'s
+    single cheapest-sufficient answer - for callers that need real per-line boxes AND the
+    most accurate transcription, which is not always the same engine.
+
+    RapidOCR is the only engine with real per-line geometry (boxes + confidence); the local
+    VLM (Gemma-3, see ocr/local_vlm.py) transcribes noticeably more accurately on this dataset
+    but reports one fake box spanning the whole crop for every line - useless for anything
+    position-based. So:
+
+      * `geometry_result` is ALWAYS RapidOCR's raw read - the one source layout heuristics
+        (stage2.heuristic._extract_brand_and_name) and LayoutLMv3 (which needs real word
+        positions) can trust.
+      * `text_result` is the local VLM's read WHEN `policy.use_local_vlm` is on and the MLX
+        server is reachable - i.e. its transcription REPLACES RapidOCR's for every
+        text/regex/block-based field extractor, it does not merge with it. Falls back to
+        `geometry_result` (RapidOCR's own text) if the VLM is off, unavailable, or the call
+        itself fails - a free-tier hiccup should degrade gracefully, never break the read.
+    """
+    policy = policy or Policy()
+    geometry_result = _cached_or_run(rgb, "rapidocr", rapid.run)
+
+    if not (policy.use_local_vlm and local_vlm.available()):
+        return geometry_result, geometry_result
+
+    try:
+        text_result = _cached_or_run(rgb, "local_vlm", local_vlm.run)
+    except Exception:
+        # e.g. the MLX server was up for available() but the request itself timed out/errored
+        return geometry_result, geometry_result
+    return geometry_result, text_result

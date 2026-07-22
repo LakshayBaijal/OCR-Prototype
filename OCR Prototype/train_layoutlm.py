@@ -26,7 +26,6 @@ from pathlib import Path
 os.environ.setdefault("BGREMOVE", "0")  # fast Stage-0 for data collection
 warnings.filterwarnings("ignore")
 
-import numpy as np
 import pandas as pd
 
 import products
@@ -40,8 +39,14 @@ from stage2.layoutlm import (
 
 ROOT = Path(__file__).parent
 DATASET = ROOT / "Dataset"
-TARGET_FIELDS_GT = ["Product Name", "Brand", "Mrp", "Net Quantity", "Fssai No",
-                    "Manufacturer", "Country Of Origin"]
+TARGET_FIELDS_GT = [
+    "Product Name", "Brand", "Mrp", "Net Quantity", "Fssai No", "Manufacturer",
+    "Country Of Origin",
+    # Newer label classes (see stage2/layoutlm.py LABELS) - CSV-backed fields added to widen
+    # coverage beyond the original 7.
+    "Flavours & Spices", "Mineral Source", "Recommended Age", "Theme/ Occasion Type",
+    "Hair Type", "Caffeine Content", "Pack Quantity",
+]
 
 
 def _gt(row: pd.Series) -> dict:

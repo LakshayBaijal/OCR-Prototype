@@ -88,11 +88,19 @@ venv/bin/python compare_engines.py --n 200
 venv/bin/python eval_stage2.py --n 100
 venv/bin/python eval_stage2.py --n 100 --vlm        # union the local VLM into Stage-1 OCR first
 
-# ---- Optional LayoutLMv3 tier ----
+
+
+# ---- Model training LayoutLMv3 tier ----
 # microsoft/layoutlmv3-base has NO product-field head, so it must be FINE-TUNED first. We have
 # no token labels, so training uses WEAK SUPERVISION (aligns GT field values onto OCR tokens).
 # 1) Train (writes layoutlmv3_finetuned/). Smoke-test the whole loop first:
 venv/bin/python train_layoutlm.py --n 20 --epochs 1          # fast end-to-end check
 venv/bin/python train_layoutlm.py --n 300 --epochs 3         # a real run
 # 2) Then evaluate WITH the LayoutLMv3 tier merged in on top of the heuristic parser:
+venv/bin/python eval_stage2.py --n 100 --layoutlm
+
+
+cd "/Users/lakshay.baijal/Desktop/Projects/OCR Prototype"
+venv/bin/python train_layoutlm.py --n 300 --epochs 3 
+
 venv/bin/python eval_stage2.py --n 100 --layoutlm

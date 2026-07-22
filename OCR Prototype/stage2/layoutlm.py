@@ -14,6 +14,13 @@ token labels, then fine-tunes. The labels are noisy by construction, so treat th
 learned SECOND OPINION that the merge step trusts only where it is confident - never as a
 replacement for the barcode/regex signals that are exact.
 
+NOTE: an experiment training this on just the 10 hand-verified `ground_truth_100` rows (with a
+much wider label set - Ingredients, Nutritional_Details, etc.) was tried and reverted - 10
+products was not enough data for the model to learn coherent spans (it was producing single
+disconnected words like "CLASSIC" or "Taurine" instead of real values). Back on
+`Ground Truth.csv`-based training (300 products) here, which the checkpoint below reflects.
+Revisit the ground_truth_100 approach once more rows are filled in.
+
 `available()` is False until a fine-tuned checkpoint exists, so the pipeline runs fine (on the
 heuristic parser alone) whether or not anyone has trained this yet.
 """
@@ -32,11 +39,30 @@ CHECKPOINT_DIR = Path(__file__).parent.parent / "layoutlmv3_finetuned"
 
 # Token label set. Flat field labels (no BIO) - packaging fields are short runs and BIO's
 # boundary modelling buys little on this noisy weak-labelled data. "O" = not a target field.
-LABELS = ["O", "BRAND", "MRP", "NET_QUANTITY", "FSSAI", "MANUFACTURER", "COUNTRY", "PRODUCT_NAME"]
+#
+# The first 7 are the original set. The next 7 (FLAVOUR .. PACK_QUANTITY) extend coverage to
+# more of the ground_truth_100-shaped schema (stage2/schema.to_ground_truth_dict) - added
+# because they're the fields with a `Ground Truth.csv` column AND a short/discrete-enough
+# value for weak_labels() to align onto OCR tokens. Fields with NO ground-truth column at all
+# (Ingredients, Nutritional_Details, Usage_Details, Storage_Instructions, Bullet_Point,
+# Diet_Type, Dimension, Preservatives, Ready_to_cook, Ready_to_eat) have nothing to weakly
+# align against and so cannot be added here - they stay heuristic-only. Capacity is
+# deliberately NOT its own label: it's already filled by mirroring Net_Quantity+UOM (see
+# schema.to_ground_truth_dict), so a separate label would just be redundant. Baby_Weight and
+# Absorption_Duration are numeric RANGES ("3-6 kg") that this exact-digit weak-labeller
+# handles poorly, so they're skipped rather than trained on noisy labels.
+LABELS = [
+    "O", "BRAND", "MRP", "NET_QUANTITY", "FSSAI", "MANUFACTURER", "COUNTRY", "PRODUCT_NAME",
+    "FLAVOUR", "MINERAL_SOURCE", "RECOMMENDED_AGE", "THEME_OCCASION", "HAIR_TYPE",
+    "CAFFEINE_CONTENT", "PACK_QUANTITY",
+]
 LABEL2ID = {l: i for i, l in enumerate(LABELS)}
 ID2LABEL = {i: l for l, i in LABEL2ID.items()}
 
-# Which GT column each token label fills.
+# Which field key each token label fills. Field keys here MUST match the exact strings
+# `stage2.heuristic` already uses for these fields, so a LayoutLMv3 guess and the heuristic's
+# guess compete/merge on the SAME key via ProductExtraction.set() - never silently creating a
+# second, unused key.
 LABEL_TO_FIELD = {
     "BRAND": "Brand",
     "MRP": "Mrp",
@@ -45,6 +71,13 @@ LABEL_TO_FIELD = {
     "MANUFACTURER": "Manufacturer",
     "COUNTRY": "Country Of Origin",
     "PRODUCT_NAME": "Product Name",
+    "FLAVOUR": "Flavours_or_Spices",
+    "MINERAL_SOURCE": "Mineral_Source",
+    "RECOMMENDED_AGE": "Recommended_Age",
+    "THEME_OCCASION": "Theme_or_Occasion_Type",
+    "HAIR_TYPE": "Hair_Type",
+    "CAFFEINE_CONTENT": "Caffeine_Content",
+    "PACK_QUANTITY": "Pack_Quantity",
 }
 
 _model = None
@@ -97,6 +130,15 @@ def _digits(s) -> str:
     return re.sub(r"\D", "", s)
 
 
+def _first_number(s) -> str:
+    """The FIRST standalone number in a value, for fields whose GT string carries more than
+    one number alongside a unit (Caffeine Content: '99mg/330ml Can' has both 99 and 330).
+    `_digits()` would concatenate them into '99330', which never matches a single OCR word's
+    digits - this is why Caffeine Content uses this instead of `_digits()` below."""
+    m = re.search(r"\d+", str(s))
+    return m.group(0) if m else ""
+
+
 def weak_labels(words: list[str], gt: dict) -> list[str]:
     """Manufacture a token label per word by aligning the ground-truth field VALUES back onto
     the OCR words that spell them. This is the weak supervision that stands in for real
@@ -119,8 +161,21 @@ def weak_labels(words: list[str], gt: dict) -> list[str]:
         "MANUFACTURER": gt.get("Manufacturer"),
         "COUNTRY": gt.get("Country Of Origin"),
         "PRODUCT_NAME": gt.get("Product Name"),
+        "FLAVOUR": gt.get("Flavours & Spices"),
+        "MINERAL_SOURCE": gt.get("Mineral Source"),
+        "THEME_OCCASION": gt.get("Theme/ Occasion Type"),
+        "HAIR_TYPE": gt.get("Hair Type"),
     }
-    numeric = {"MRP": gt.get("Mrp"), "FSSAI": gt.get("Fssai No")}
+    # Recommended Age / Caffeine Content / Pack Quantity are printed as text ("18+",
+    # "99mg/330ml Can", "Pack of 6") but their CSV values carry a distinctive digit run - the
+    # same alignment trick as Mrp/Fssai, just on fields with a unit/word around the number.
+    numeric = {
+        "MRP": gt.get("Mrp"),
+        "FSSAI": gt.get("Fssai No"),
+        "RECOMMENDED_AGE": gt.get("Recommended Age"),
+        "CAFFEINE_CONTENT": gt.get("Caffeine Content"),
+        "PACK_QUANTITY": gt.get("Pack Quantity"),
+    }
 
     norm_words = [norm(w) for w in words]
     digit_words = [_digits(w) for w in words]
@@ -134,7 +189,9 @@ def weak_labels(words: list[str], gt: dict) -> list[str]:
                 labels[i] = label
 
     for label, value in numeric.items():
-        d = _digits(value)
+        # Caffeine Content values carry two numbers ("99mg/330ml Can") - match on just the
+        # first one; the others (single numbers) use the full digit signature as before.
+        d = _first_number(value) if label == "CAFFEINE_CONTENT" else _digits(value)
         if not d or d in ("0", ""):
             continue
         for i, dw in enumerate(digit_words):

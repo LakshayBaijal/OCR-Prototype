@@ -1,5 +1,5 @@
 # eval_stage2
-# run at : 2026-07-21 12:50:55
+# run at : 2026-07-22 14:01:24
 # command: eval_stage2.py --n 100 --layoutlm
 
 
@@ -9,18 +9,18 @@ STAGE 2 - FIELD EXTRACTION  (100 products, Stage-1 engines: rapidocr + LayoutLMv
 
   field                     F1   coverage
   ----------------------------------------
-  Product Name            31%       95%
-  Brand                   39%       95%
-  Mrp                      2%        7%
-  Net Quantity            42%       63%
-  Upc / Ean               27%       30%
-  Fssai No                58%       27%
-  Manufacturer            12%       17%
-  Country Of Origin        7%        8%
+  Product Name            25%       94%
+  Brand                   57%       82%
+  Mrp                      0%        0%
+  Net Quantity             0%        0%
+  Upc / Ean                0%        0%
+  Fssai No                31%        0%
+  Manufacturer            12%       27%
+  Country Of Origin       19%       21%
   ----------------------------------------
-  OVERALL (macro)         27%
+  OVERALL (macro)         18%
 
-  precision 47%   recall 27%   F1 33%   (leaf-level, across all fields)
+  precision 46%   recall 18%   F1 24%   (leaf-level, across all fields)
 
   F1       = fuzzy match of the extracted value vs ground truth (numeric-aware)
   coverage = how often the field was populated at all (not abstained)

@@ -6,3 +6,6 @@ pandas>=2.2
 rembg>=2.0    # learned background matte (BiRefNet); optional - pipeline falls back without it
 pyzbar>=0.1.9 # 2nd barcode decoder (ZBar) - needs the native lib too: `brew install zbar`
               # (macOS). Optional - falls back to cv2-only if zbar isn't installed.
+google-genai>=0.3   # real Gemini API, stage2/gemini_direct.py - needs GEMINI_API_KEY
+python-dotenv>=1.0  # loads GEMINI_API_KEY / OPENROUTER_API_KEY from a local .env file
+openai>=1.0         # OpenRouter client, stage2/openrouter_direct.py - needs OPENROUTER_API_KEY

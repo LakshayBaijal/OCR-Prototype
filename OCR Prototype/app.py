@@ -575,6 +575,7 @@ with stage2_tab:
             "OpenRouter (free hosted models — Gemma-4, Nemotron)",
             "Direct VLM → JSON (local Gemma-3, free)",
             "OCR then Map (local, two calls: read text first, map separately)",
+            "Gemma → Repair → Gemini (3-tier: local first, real Gemini only as last resort)",
             "Heuristic + LayoutLM (regex-based)",
         ],
         index=0,
@@ -586,7 +587,11 @@ with stage2_tab:
              "structured JSON out, for free. OCR then Map: two local calls — OCR each image "
              "first, then a text-only call maps the combined text into the schema (can't see "
              "purely visual cues like the veg/non-veg dot, but decomposes the task into two "
-             "easier steps). Heuristic + LayoutLM: the older regex-based path.",
+             "easier steps). Gemma → Repair → Gemini: the same escalation ondc-intelligence "
+             "built and measured this session — Gemma once, Gemma again with its own repair "
+             "loop only if that fails, real Gemini only if BOTH fail — shows what every tier "
+             "that actually ran produced, not just the winner. Heuristic + LayoutLM: the "
+             "older regex-based path.",
     )
 
     if extraction_mode.startswith("OpenRouter"):
@@ -643,6 +648,76 @@ with stage2_tab:
             is_available=local_vlm.available,
             unavailable_msg="MLX server not reachable at 127.0.0.1:8080 (see commands.txt to start it).",
         )
+
+    elif extraction_mode.startswith("Gemma → Repair → Gemini"):
+        from stage2.gemma_then_gemini import extract_product_gemma_then_gemini
+
+        use_fallback_chain = st.checkbox(
+            "Fall back to heuristic + LayoutLM for fields the winning tier leaves null",
+            value=True, key="chain_fallback",
+            help="Same meaning as the other modes' checkbox above — only fills fields the "
+                 "winning tier (whichever of the three actually answered) left null.",
+        )
+        if not local_vlm.available():
+            st.warning(
+                "MLX server not reachable at 127.0.0.1:8080 (see commands.txt — or set "
+                "MLX_HOST before launching streamlit to point at a different server). Both "
+                "Gemma attempts will fail immediately and this will go straight to Gemini."
+            )
+
+        image_paths = [str(DATASET / name) for name in group]
+        cache_key = f"chain_result::{products.product_key(choice) or choice}"
+
+        if st.button("Run Gemma → Repair → Gemini extraction", type="primary", key="chain_button"):
+            with st.spinner("Calling Gemma (original attempt)…"):
+                chain_result = extract_product_gemma_then_gemini(
+                    image_paths, use_fallback=use_fallback_chain
+                )
+            st.session_state[cache_key] = chain_result
+
+        cached = st.session_state.get(cache_key)
+        if cached is None:
+            st.info("Click 'Run Gemma → Repair → Gemini extraction' above to see a result for this product.")
+            extraction = ProductExtraction()
+            source_caption = "No result yet for this product — click the button above."
+        else:
+            extraction, _winning_dict, tier_info, attempts = cached
+            tier_label = {
+                "gemma-first-try": "Gemma original",
+                "gemma-repaired": "Gemma repaired",
+                "gemini-fallback": "Gemini fallback",
+            }[tier_info["tier"]]
+            st.success(f"Winning tier: **{tier_label}** (after {tier_info['attempts']} Gemma attempt(s)).")
+
+            status_label = {
+                "success": "✅ succeeded",
+                "failed": "❌ failed",
+                "not_attempted": "⬜ not attempted — an earlier tier already succeeded",
+            }
+            st.caption(
+                "Every tier that actually ran, in order — not just the one that won. "
+                "A tier that never ran (because an earlier one already succeeded) is "
+                "distinct from one that ran and failed."
+            )
+            for key, label in (
+                ("gemma_original", "1 · Gemma original (one attempt, no repair)"),
+                ("gemma_repaired", "2 · Gemma repaired (retry + repair loop)"),
+                ("gemini_fallback", "3 · Gemini fallback"),
+            ):
+                a = attempts[key]
+                with st.expander(f"{label} — {status_label[a['status']]}", expanded=(a["status"] == "success")):
+                    if a["dict"] is not None:
+                        non_null = sum(1 for v in a["dict"].values() if v not in (None, [], ""))
+                        st.caption(f"{non_null} non-null field(s).")
+                        st.json(a["dict"])
+                    elif a["status"] == "failed":
+                        st.caption("Ran, but returned no usable JSON (unavailable, timed out, or every retry produced unparseable output).")
+                    else:
+                        st.caption("Never ran — an earlier tier already succeeded.")
+
+            source_caption = f"Gemma → Repair → Gemini ({tier_label})" + (
+                " + heuristic/LayoutLM fallback for the rest" if use_fallback_chain else ""
+            )
 
     else:
         use_vlm_text = st.checkbox(

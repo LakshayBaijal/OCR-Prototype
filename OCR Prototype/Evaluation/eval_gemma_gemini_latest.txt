@@ -1,0 +1,6 @@
+# eval_gemma_gemini
+# run at : 2026-08-03 15:26:18
+# command: eval_gemma_gemini.py --n 20
+
+  row  imgs      status              tier  product
+----------------------------------------------------------------------------------------

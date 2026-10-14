@@ -26,16 +26,26 @@ from __future__ import annotations
 import base64
 import io
 import json
+import os
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 import numpy as np
+from dotenv import load_dotenv
 from PIL import Image
 
 from .types import OCRLine, OCRResult
 
-HOST = "http://127.0.0.1:8080"
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+# Override to point at a different (or shared) mlx_vlm.server — e.g. ondc-intelligence's
+# own mlx_server/serve.sh on 8081, already proven clean on Gemma-4 (E2B and the E4B QAT
+# variant) this session, unlike this repo's own local mlx-vlm install (0.6.4, which fails
+# to LOAD Gemma-4 outright — see commands.txt). Defaults unchanged, so every existing
+# caller behaves identically unless MLX_HOST/MLX_MODEL are actually set.
+HOST = os.environ.get("MLX_HOST", "http://127.0.0.1:8080")
 
 # The model to REQUEST. mlx_vlm.server supports several cached models and lazy-swaps
 # between them per-request (unload the current one, load the requested one) - so this is
@@ -48,7 +58,7 @@ HOST = "http://127.0.0.1:8080"
 # qwen3_vl/language.py - a shared bug in mlx-vlm's threading model, not one model version.
 # Confirmed on both; do not retry Qwen-VL here until mlx-vlm fixes it upstream.
 # Gemma-3 is the only VLM family confirmed to serve correctly on this setup.
-MODEL = "mlx-community/gemma-3-4b-it-4bit"
+MODEL = os.environ.get("MLX_MODEL", "mlx-community/gemma-3-4b-it-4bit")
 
 PROMPT = (
     "Read all text printed on this product package. "
@@ -166,7 +176,9 @@ def _repair_truncated_json(text: str) -> dict | None:
     return None
 
 
-def _chat_json_with_retry(content: list[dict], system: str, max_retries: int) -> dict | None:
+def _chat_json_with_retry(
+    content: list[dict], system: str, max_retries: int, response_schema: dict | None = None,
+) -> dict | None:
     """Shared retry/parse loop behind both run_structured() (images in) and
     run_map_from_text() (text in) - they differ only in what `content` holds, not in how the
     response is retried or parsed.
@@ -179,6 +191,15 @@ def _chat_json_with_retry(content: list[dict], system: str, max_retries: int) ->
     different chance rather than repeating the same near-miss. If parsing still fails outright,
     `_repair_truncated_json` makes one attempt to salvage a response cut off mid-object before
     giving up on that attempt. Returns None (never raises) only if every attempt fails.
+
+    `response_schema`, when given, is sent as an OpenAI-style `response_format:
+    {"type":"json_schema",...}` constraint - mlx_vlm.server supports this via
+    llguidance grammar-constrained decoding (verified this session, ondc-intelligence).
+    Without it the model is free to invent its own JSON key names instead of the
+    schema's - `strict: true` is not optional here, it's the proven fix for that exact
+    failure mode on this same model family. `None` (the default) omits the field
+    entirely, so every EXISTING caller (stage2/vlm_direct.py's two functions) is
+    completely unaffected - only a caller that explicitly passes a schema opts in.
     """
     if not available():
         return None
@@ -196,6 +217,11 @@ def _chat_json_with_retry(content: list[dict], system: str, max_retries: int) ->
             # each) needs far more headroom than the 512-token OCR-text prompt above.
             "max_tokens": 3000,
         }
+        if response_schema is not None:
+            payload["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "product_record", "strict": True, "schema": response_schema},
+            }
         req = urllib.request.Request(
             f"{HOST}/v1/chat/completions",
             data=json.dumps(payload).encode(),
@@ -227,6 +253,7 @@ def _chat_json_with_retry(content: list[dict], system: str, max_retries: int) ->
 
 def run_structured(
     rgb_images: list[np.ndarray], system: str, user: str, max_retries: int = 3,
+    response_schema: dict | None = None,
 ) -> dict | None:
     """Direct image(s) -> structured JSON, the same job Gemini does in `ondc-intelligence` -
     NOT the line-by-line OCR-text contract `run()` above uses. See stage2/vlm_direct.py for
@@ -238,13 +265,21 @@ def run_structured(
     since fields live across a product's different faces. See run_map_from_text() below for
     the two-call alternative (OCR each image separately first, then map from the combined
     text alone - no images in the mapping call).
+
+    `response_schema`: see _chat_json_with_retry's docstring. `max_retries=0` here forces
+    exactly one HTTP attempt - the way stage2/gemma_then_gemini.py isolates a clean
+    "first try" signal, since this function has no other way to report which internal
+    attempt succeeded.
     """
     content = [{"type": "image_url", "image_url": {"url": _data_uri(rgb)}} for rgb in rgb_images]
     content.append({"type": "text", "text": user})
-    return _chat_json_with_retry(content, system, max_retries)
+    return _chat_json_with_retry(content, system, max_retries, response_schema=response_schema)
 
 
-def run_map_from_text(text_blob: str, system: str, user: str, max_retries: int = 3) -> dict | None:
+def run_map_from_text(
+    text_blob: str, system: str, user: str, max_retries: int = 3,
+    response_schema: dict | None = None,
+) -> dict | None:
     """Structured JSON from TEXT ALONE - no images in this call at all. The two-call
     alternative to run_structured(): OCR each of a product's images separately with run()
     first (per stage2.vlm_direct.extract_product_two_call), concatenate the results into
@@ -259,4 +294,4 @@ def run_map_from_text(text_blob: str, system: str, user: str, max_retries: int =
     _chat_json_with_retry) and the same "never raises, None on total failure" contract.
     """
     content = [{"type": "text", "text": f"{user}\n\nOCR TEXT FROM THE PRODUCT'S IMAGES:\n{text_blob}"}]
-    return _chat_json_with_retry(content, system, max_retries)
+    return _chat_json_with_retry(content, system, max_retries, response_schema=response_schema)

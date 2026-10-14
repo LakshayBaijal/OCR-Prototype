@@ -1,0 +1,149 @@
+
+/Users/lakshay.baijal/Desktop/Projects/Image:Text Enhancement/ondc-intelligence-fea-enhancement-evals/image_enhancement/image_enhancement_processed_silhouette
+  51 image(s)
+  [1/51] img1.png -> skipped (already done)
+  [2/51] img10.png -> skipped (already done)
+  [3/51] img11.png -> skipped (already done)
+  [4/51] img12.png -> skipped (already done)
+  [5/51] img13.png -> skipped (already done)
+  [6/51] img14.png -> skipped (already done)
+  [7/51] img15.png -> skipped (already done)
+  [8/51] img16.png -> skipped (already done)
+  [9/51] img17.png -> skipped (already done)
+  [10/51] img18.png -> skipped (already done)
+  [11/51] img19.png -> skipped (already done)
+  [12/51] img2.png -> skipped (already done)
+  [13/51] img20.png -> skipped (already done)
+  [14/51] img21.png -> skipped (already done)
+  [15/51] img22.png -> skipped (already done)
+  [16/51] img23.png -> skipped (already done)
+  [17/51] img24.png -> skipped (already done)
+  [18/51] img25.png -> skipped (already done)
+  [19/51] img26.png -> skipped (already done)
+  [20/51] img27.png -> skipped (already done)
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 16443.95it/s]
+[transformers] `PaddleOCRVLProcessor` defines `image_processor_class = 'AutoImageProcessor'`, which is deprecated. Register the correct mapping in `AutoImageProcessor` instead.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+[transformers] Unrecognized keys in `rope_parameters` for 'rope_type'='default': {'mrope_section'}
+[transformers] Unrecognized keys in `rope_parameters` for 'rope_type'='default': {'mrope_section'}
+[transformers] Model config: image_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101304. This may result in unexpected behavior.
+[transformers] Model config: video_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101305. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101306. This may result in unexpected behavior.
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 6085.76it/s]
+Prefill:   0%|          | 0/3528 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3528 [00:13<00:09, 151.21tok/s]Prefill: 100%|█████████▉| 3527/3528 [00:13<00:00, 301.64tok/s]Prefill: 100%|█████████▉| 3527/3528 [00:13<00:00, 257.08tok/s]
+  [21/51] img28.png -> img28.txt (73 chars)
+Prefill:   0%|          | 0/3565 [00:00<?, ?tok/s]Prefill:  57%|█████▋    | 2048/3565 [00:12<00:09, 166.33tok/s]Prefill: 100%|█████████▉| 3564/3565 [00:12<00:00, 335.60tok/s]Prefill: 100%|█████████▉| 3564/3565 [00:12<00:00, 285.51tok/s]
+  [22/51] img29.png -> img29.txt (206 chars)
+Prefill:   0%|          | 0/3548 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3548 [00:12<00:09, 157.89tok/s]Prefill: 100%|█████████▉| 3547/3548 [00:13<00:00, 316.92tok/s]Prefill: 100%|█████████▉| 3547/3548 [00:13<00:00, 269.84tok/s]
+  [23/51] img3.png -> img3.txt (12 chars)
+Prefill:   0%|          | 0/3573 [00:00<?, ?tok/s]Prefill:  57%|█████▋    | 2048/3573 [00:12<00:09, 158.85tok/s]Prefill: 100%|█████████▉| 3572/3573 [00:13<00:00, 321.33tok/s]Prefill: 100%|█████████▉| 3572/3573 [00:13<00:00, 273.25tok/s]
+  [24/51] img30.png -> img30.txt (349 chars)
+Prefill:   0%|          | 0/3505 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3505 [00:12<00:09, 158.90tok/s]Prefill: 100%|█████████▉| 3504/3505 [00:13<00:00, 314.16tok/s]Prefill: 100%|█████████▉| 3504/3505 [00:13<00:00, 268.20tok/s]
+  [25/51] img31.png -> img31.txt (48 chars)
+Prefill:   0%|          | 0/3583 [00:00<?, ?tok/s]Prefill:  57%|█████▋    | 2048/3583 [00:13<00:10, 150.23tok/s]Prefill: 100%|█████████▉| 3582/3583 [00:13<00:00, 304.35tok/s]Prefill: 100%|█████████▉| 3582/3583 [00:13<00:00, 258.80tok/s]
+  [26/51] img32.png -> img32.txt (224 chars)
+Prefill:   0%|          | 0/3539 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3539 [00:14<00:10, 145.80tok/s]Prefill: 100%|█████████▉| 3538/3539 [00:14<00:00, 290.47tok/s]Prefill: 100%|█████████▉| 3538/3539 [00:14<00:00, 247.77tok/s]
+  [27/51] img33.png -> img33.txt (27 chars)
+Prefill:   0%|          | 0/3563 [00:00<?, ?tok/s]Prefill:  57%|█████▋    | 2048/3563 [00:16<00:12, 125.37tok/s]Prefill: 100%|█████████▉| 3562/3563 [00:16<00:00, 251.73tok/s]Prefill: 100%|█████████▉| 3562/3563 [00:16<00:00, 214.44tok/s]
+  [28/51] img34.png -> img34.txt (83 chars)
+Prefill:   0%|          | 0/3539 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3539 [00:18<00:13, 109.26tok/s]Prefill: 100%|█████████▉| 3538/3539 [00:19<00:00, 217.69tok/s]Prefill: 100%|█████████▉| 3538/3539 [00:19<00:00, 185.69tok/s]
+  [29/51] img35.png -> img35.txt (88 chars)
+Prefill:   0%|          | 0/3491 [00:00<?, ?tok/s]Prefill:  59%|█████▊    | 2048/3491 [00:19<00:13, 104.76tok/s]Prefill: 100%|█████████▉| 3490/3491 [00:19<00:00, 205.13tok/s]Prefill: 100%|█████████▉| 3490/3491 [00:19<00:00, 175.52tok/s]
+  [30/51] img36.png -> img36.txt (65 chars)
+Prefill:   0%|          | 0/3515 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3515 [00:20<00:14, 101.90tok/s]Prefill: 100%|█████████▉| 3514/3515 [00:20<00:00, 201.53tok/s]Prefill: 100%|█████████▉| 3514/3515 [00:20<00:00, 172.11tok/s]
+  [31/51] img37.png -> img37.txt (37 chars)
+Prefill:   0%|          | 0/3553 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3553 [00:20<00:15, 98.65tok/s]Prefill: 100%|█████████▉| 3552/3553 [00:21<00:00, 191.91tok/s]Prefill: 100%|█████████▉| 3552/3553 [00:21<00:00, 164.93tok/s]
+  [32/51] img38.png -> img38.txt (48 chars)
+Prefill:   0%|          | 0/3553 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3553 [00:20<00:15, 98.03tok/s]Prefill: 100%|█████████▉| 3552/3553 [00:21<00:00, 196.60tok/s]Prefill: 100%|█████████▉| 3552/3553 [00:21<00:00, 167.47tok/s]
+  [33/51] img39.png -> img39.txt (2332 chars)
+Prefill:   0%|          | 0/3515 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3515 [00:20<00:15, 97.67tok/s]Prefill: 100%|█████████▉| 3514/3515 [00:21<00:00, 193.13tok/s]Prefill: 100%|█████████▉| 3514/3515 [00:21<00:00, 164.94tok/s]
+  [34/51] img4.png -> img4.txt (905 chars)
+Prefill:   0%|          | 0/3541 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3541 [00:20<00:15, 99.30tok/s]Prefill: 100%|█████████▉| 3540/3541 [00:20<00:00, 197.99tok/s]Prefill: 100%|█████████▉| 3540/3541 [00:20<00:00, 168.86tok/s]
+  [35/51] img40.png -> img40.txt (193 chars)
+Prefill:   0%|          | 0/3541 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3541 [00:20<00:14, 101.75tok/s]Prefill: 100%|█████████▉| 3540/3541 [00:20<00:00, 202.11tok/s]Prefill: 100%|█████████▉| 3540/3541 [00:20<00:00, 172.57tok/s]
+  [36/51] img41.png -> img41.txt (158 chars)
+Prefill:   0%|          | 0/3528 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3528 [00:21<00:15, 97.15tok/s]Prefill: 100%|█████████▉| 3527/3528 [00:21<00:00, 193.31tok/s]Prefill: 100%|█████████▉| 3527/3528 [00:21<00:00, 164.88tok/s]
+  [37/51] img42.png -> img42.txt (157 chars)
+Prefill:   0%|          | 0/3578 [00:00<?, ?tok/s]Prefill:  57%|█████▋    | 2048/3578 [00:21<00:16, 94.87tok/s]Prefill: 100%|█████████▉| 3577/3578 [00:21<00:00, 191.71tok/s]Prefill: 100%|█████████▉| 3577/3578 [00:21<00:00, 163.11tok/s]
+  [38/51] img43.png -> img43.txt (25 chars)
+Prefill:   0%|          | 0/3523 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3523 [00:20<00:15, 98.27tok/s]Prefill: 100%|█████████▉| 3522/3523 [00:21<00:00, 194.65tok/s]Prefill: 100%|█████████▉| 3522/3523 [00:21<00:00, 166.21tok/s]
+  [39/51] img44.png -> img44.txt (55 chars)
+Prefill:   0%|          | 0/3573 [00:00<?, ?tok/s]Prefill:  57%|█████▋    | 2048/3573 [00:20<00:15, 99.45tok/s]Prefill: 100%|█████████▉| 3572/3573 [00:20<00:00, 200.47tok/s]Prefill: 100%|█████████▉| 3572/3573 [00:20<00:00, 170.65tok/s]
+  [40/51] img45.png -> img45.txt (2833 chars)
+Prefill:   0%|          | 0/3509 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3509 [00:20<00:14, 98.57tok/s]Prefill: 100%|█████████▉| 3508/3509 [00:21<00:00, 194.14tok/s]Prefill: 100%|█████████▉| 3508/3509 [00:21<00:00, 165.96tok/s]
+  [41/51] img46.png -> img46.txt (78 chars)
+Prefill:   0%|          | 0/3515 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3515 [00:22<00:15, 92.70tok/s]Prefill: 100%|█████████▉| 3514/3515 [00:22<00:00, 183.04tok/s]Prefill: 100%|█████████▉| 3514/3515 [00:22<00:00, 156.39tok/s]
+  [42/51] img47.png -> img47.txt (483 chars)
+Prefill:   0%|          | 0/3513 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3513 [00:21<00:15, 93.55tok/s]Prefill: 100%|█████████▉| 3512/3513 [00:22<00:00, 184.54tok/s]Prefill: 100%|█████████▉| 3512/3513 [00:22<00:00, 157.70tok/s]
+  [43/51] img48.png -> img48.txt (70 chars)
+Prefill:   0%|          | 0/3541 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3541 [00:21<00:15, 95.09tok/s]Prefill: 100%|█████████▉| 3540/3541 [00:21<00:00, 188.59tok/s]Prefill: 100%|█████████▉| 3540/3541 [00:21<00:00, 161.09tok/s]
+  [44/51] img49.png -> img49.txt (178 chars)
+Prefill:   0%|          | 0/3577 [00:00<?, ?tok/s]Prefill:  57%|█████▋    | 2048/3577 [00:22<00:16, 91.38tok/s]Prefill: 100%|█████████▉| 3576/3577 [00:22<00:00, 184.52tok/s]Prefill: 100%|█████████▉| 3576/3577 [00:22<00:00, 157.02tok/s]
+  [45/51] img5.png -> img5.txt (71 chars)
+Prefill:   0%|          | 0/3523 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3523 [00:21<00:15, 93.17tok/s]Prefill: 100%|█████████▉| 3522/3523 [00:22<00:00, 184.60tok/s]Prefill: 100%|█████████▉| 3522/3523 [00:22<00:00, 157.62tok/s]
+  [46/51] img50.png -> img50.txt (58 chars)
+  [47/51] img51.png -> img51.txt (2048 chars)
+Prefill:   0%|          | 0/3541 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3541 [00:16<00:12, 123.55tok/s]Prefill: 100%|█████████▉| 3540/3541 [00:16<00:00, 246.77tok/s]Prefill: 100%|█████████▉| 3540/3541 [00:16<00:00, 210.36tok/s]
+  [48/51] img6.png -> img6.txt (5 chars)
+Prefill:   0%|          | 0/3564 [00:00<?, ?tok/s]Prefill:  57%|█████▋    | 2048/3564 [00:17<00:12, 119.84tok/s]Prefill: 100%|█████████▉| 3563/3564 [00:17<00:00, 241.13tok/s]Prefill: 100%|█████████▉| 3563/3564 [00:17<00:00, 205.30tok/s]
+  [49/51] img7.png -> img7.txt (199 chars)
+Prefill:   0%|          | 0/3528 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3528 [00:16<00:12, 122.14tok/s]Prefill: 100%|█████████▉| 3527/3528 [00:17<00:00, 243.26tok/s]Prefill: 100%|█████████▉| 3527/3528 [00:17<00:00, 207.42tok/s]
+  [50/51] img8.png -> img8.txt (1502 chars)
+Prefill:   0%|          | 0/3085 [00:00<?, ?tok/s]Prefill:  66%|██████▋   | 2048/3085 [00:12<00:06, 170.55tok/s]Prefill: 100%|█████████▉| 3084/3085 [00:12<00:00, 287.72tok/s]Prefill: 100%|█████████▉| 3084/3085 [00:12<00:00, 253.08tok/s]
+  [51/51] img9.png -> img9.txt (170 chars)
+
+/Users/lakshay.baijal/Desktop/Projects/Image:Text Enhancement/ondc-intelligence-fea-enhancement-evals/image_enhancement/image_enhancement_output_nb_silhouette
+  53 image(s)
+  [1/53] img1.png -> img1.txt (206 chars)
+  [2/53] img10.png -> img10.txt (146 chars)
+  [3/53] img11.png -> img11.txt (74 chars)
+  [4/53] img12.png -> img12.txt (439 chars)
+  [5/53] img13.png -> img13.txt (2216 chars)
+  [6/53] img14.png -> img14.txt (110 chars)
+  [7/53] img15.png -> img15.txt (4097 chars)
+  [8/53] img16.png -> img16.txt (327 chars)
+  [9/53] img17.png -> img17.txt (1503 chars)
+  [10/53] img18.png -> img18.txt (230 chars)
+  [11/53] img19.png -> img19.txt (85 chars)
+  [12/53] img2.png -> img2.txt (43 chars)
+  [13/53] img20.png -> img20.txt (959 chars)
+  [14/53] img21.png -> img21.txt (215 chars)
+  [15/53] img22.png -> img22.txt (152 chars)
+  [16/53] img23.png -> img23.txt (338 chars)
+  [17/53] img24.png -> img24.txt (16 chars)
+  [18/53] img25.png -> img25.txt (40 chars)
+  [19/53] img26.png -> img26.txt (61 chars)
+  [20/53] img27.png -> img27.txt (525 chars)
+  [21/53] img28.png -> img28.txt (73 chars)
+  [22/53] img29.png -> img29.txt (220 chars)
+  [23/53] img3.png -> img3.txt (24 chars)
+  [24/53] img30.png -> img30.txt (344 chars)
+  [25/53] img31.png -> img31.txt (48 chars)
+  [26/53] img32.png -> img32.txt (219 chars)
+  [27/53] img33.png -> img33.txt (27 chars)
+  [28/53] img34.png -> img34.txt (78 chars)
+  [29/53] img35.png -> img35.txt (64 chars)
+  [30/53] img36.png -> img36.txt (69 chars)
+  [31/53] img37.png -> img37.txt (28 chars)
+  [32/53] img38.png -> img38.txt (48 chars)
+  [33/53] img39.png -> img39.txt (778 chars)
+  [34/53] img4.png -> img4.txt (1032 chars)
+  [35/53] img40.png -> img40.txt (112 chars)
+  [36/53] img41.png -> img41.txt (2091 chars)
+  [37/53] img42.png -> img42.txt (154 chars)
+  [38/53] img43.png -> img43.txt (40 chars)
+  [39/53] img44.png -> img44.txt (54 chars)
+  [40/53] img45.png -> img45.txt (1220 chars)
+  [41/53] img46.png -> img46.txt (50 chars)
+  [42/53] img47.png -> img47.txt (477 chars)
+  [43/53] img48.png -> img48.txt (67 chars)
+  [44/53] img49.png -> img49.txt (199 chars)
+  [45/53] img5.png -> img5.txt (69 chars)
+  [46/53] img50.png -> img50.txt (64 chars)
+  [47/53] img51.png -> img51.txt (110 chars)
+  [48/53] img52.png -> img52.txt (114 chars)
+  [49/53] img53.png -> img53.txt (132 chars)
+  [50/53] img6.png -> img6.txt (57 chars)
+  [51/53] img7.png -> img7.txt (195 chars)
+  [52/53] img8.png -> img8.txt (1819 chars)
+  [53/53] img9.png -> img9.txt (168 chars)

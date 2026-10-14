@@ -1,0 +1,82 @@
+
+/Users/lakshay.baijal/Desktop/Projects/Image:Text Enhancement/ondc-intelligence-fea-enhancement-evals/image_enhancement/image_enhancement_input
+  52 image(s)
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 10533.16it/s]
+[transformers] `PaddleOCRVLProcessor` defines `image_processor_class = 'AutoImageProcessor'`, which is deprecated. Register the correct mapping in `AutoImageProcessor` instead.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+[transformers] Unrecognized keys in `rope_parameters` for 'rope_type'='default': {'mrope_section'}
+[transformers] Unrecognized keys in `rope_parameters` for 'rope_type'='default': {'mrope_section'}
+[transformers] Model config: image_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101304. This may result in unexpected behavior.
+[transformers] Model config: video_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101305. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101306. This may result in unexpected behavior.
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 10697.94it/s]
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:13<00:09, 148.58tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 296.97tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 253.00tok/s]
+  [1/52] img1.jpg -> img1.txt (4501 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:13<00:09, 155.22tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 310.01tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 264.16tok/s]
+  [2/52] img2.jpg -> img2.txt (52 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:12<00:09, 158.31tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 315.99tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 269.31tok/s]
+  [3/52] img3.jpg -> img3.txt (5 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:12<00:09, 158.17tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 315.83tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 269.15tok/s]
+  [4/52] img4.jpg -> img4.txt (969 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:12<00:09, 158.67tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 317.03tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 270.12tok/s]
+  [5/52] img5.jpg -> img5.txt (65 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:13<00:09, 156.82tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 312.95tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 266.73tok/s]
+  [6/52] img6.jpg -> img6.txt (6 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:12<00:09, 158.24tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 316.24tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 269.42tok/s]
+  [7/52] img7.jpg -> img7.txt (200 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:12<00:09, 159.04tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 317.71tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 270.71tok/s]
+  [8/52] img8.jpg -> img8.txt (1760 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:12<00:09, 158.34tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 316.46tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 269.61tok/s]
+  [9/52] img9.jpg -> img9.txt (172 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:12<00:09, 157.70tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 315.17tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 268.51tok/s]
+  [10/52] img10.jpg -> img10.txt (12 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:12<00:09, 158.57tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 316.79tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 269.92tok/s]
+  [11/52] img11.jpg -> img11.txt (2680 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:13<00:09, 153.51tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 304.56tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:13<00:00, 260.03tok/s]
+  [12/52] img12.jpg -> img12.txt (2057 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:14<00:10, 140.51tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:14<00:00, 280.57tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:14<00:00, 239.10tok/s]
+  [13/52] img13.jpg -> img13.txt (2933 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:16<00:11, 125.56tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 250.71tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 213.65tok/s]
+  [14/52] img14.jpg -> img14.txt (81 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:14<00:10, 140.91tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:14<00:00, 280.74tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:14<00:00, 239.40tok/s]
+  [15/52] img15.jpg -> img15.txt (2052 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:14<00:10, 139.90tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:14<00:00, 278.19tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:14<00:00, 237.36tok/s]
+  [16/52] img16.jpg -> img16.txt (3405 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:15<00:11, 134.03tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 267.14tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 227.77tok/s]
+  [17/52] img17.jpg -> img17.txt (2643 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:14<00:10, 137.60tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 273.38tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 233.32tok/s]
+  [18/52] img18.jpg -> img18.txt (264 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:15<00:11, 132.53tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 264.13tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 225.21tok/s]
+  [19/52] img19.jpg -> img19.txt (4097 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:15<00:11, 131.46tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 256.77tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 220.24tok/s]
+  [20/52] img20.jpg -> img20.txt (2561 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:16<00:11, 126.52tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 252.24tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 215.06tok/s]
+  [21/52] img21.jpg -> img21.txt (3988 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:15<00:11, 130.69tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 260.35tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 222.02tok/s]
+  [22/52] img22.jpg -> img22.txt (3102 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:15<00:11, 129.60tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 257.97tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 220.04tok/s]
+  [23/52] img23.jpg -> img23.txt (336 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:15<00:11, 131.52tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 261.65tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 223.21tok/s]
+  [24/52] img24.jpg -> img24.txt (11 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:15<00:11, 131.23tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 261.62tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 223.05tok/s]
+  [25/52] img25.jpg -> img25.txt (4 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:15<00:11, 130.33tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 258.95tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:15<00:00, 221.00tok/s]
+  [26/52] img26.jpg -> img26.txt (61 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:17<00:12, 117.10tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:17<00:00, 233.72tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:17<00:00, 199.20tok/s]
+  [27/52] img27.jpg -> img27.txt (527 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:15<00:11, 128.44tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 255.21tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 217.80tok/s]
+  [28/52] img28.jpg -> img28.txt (73 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:16<00:12, 121.80tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:17<00:00, 243.16tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:17<00:00, 207.23tok/s]
+  [29/52] img29.jpg -> img29.txt (212 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:17<00:12, 119.93tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:17<00:00, 239.56tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:17<00:00, 204.13tok/s]
+  [30/52] img30.jpg -> img30.txt (345 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:17<00:12, 118.08tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:17<00:00, 235.58tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:17<00:00, 200.80tok/s]
+  [31/52] img31.jpg -> img31.txt (48 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:18<00:13, 108.04tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:19<00:00, 214.57tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:19<00:00, 183.14tok/s]
+  [32/52] img32.jpg -> img32.txt (203 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:19<00:13, 106.93tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:19<00:00, 213.93tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:19<00:00, 182.20tok/s]
+  [33/52] img33.jpg -> img33.txt (27 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:16<00:11, 125.75tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 249.62tok/s]Prefill: 100%|█████████▉| 3531/3532 [00:16<00:00, 213.09tok/s]
+  [34/52] img34.jpg -> img34.txt (83 chars)
+Prefill:   0%|          | 0/3532 [00:00<?, ?tok/s]Prefill:  58%|█████▊    | 2048/3532 [00:17<00:12, 114.17tok/s]/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/resource_tracker.py:475: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-5u3gy_t3'}
+  warnings.warn(

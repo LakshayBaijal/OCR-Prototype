@@ -1,0 +1,12 @@
+
+/Users/lakshay.baijal/Desktop/Projects/Image:Text Enhancement/ondc-intelligence-fea-enhancement-evals/image_enhancement/image_enhancement_output_nb_silhouette
+  53 image(s)
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 8446.04it/s]
+[transformers] `PaddleOCRVLProcessor` defines `image_processor_class = 'AutoImageProcessor'`, which is deprecated. Register the correct mapping in `AutoImageProcessor` instead.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+[transformers] Unrecognized keys in `rope_parameters` for 'rope_type'='default': {'mrope_section'}
+[transformers] Unrecognized keys in `rope_parameters` for 'rope_type'='default': {'mrope_section'}
+[transformers] Model config: image_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101304. This may result in unexpected behavior.
+[transformers] Model config: video_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101305. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101306. This may result in unexpected behavior.
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 7609.40it/s]

@@ -1,0 +1,60 @@
+
+/Users/lakshay.baijal/Desktop/Projects/Image:Text Enhancement/ondc-intelligence-fea-enhancement-evals/image_enhancement/image_enhancement_output_final_silhouette
+  48 image(s)
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 47626.46it/s]
+[transformers] `PaddleOCRVLProcessor` defines `image_processor_class = 'AutoImageProcessor'`, which is deprecated. Register the correct mapping in `AutoImageProcessor` instead.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+[transformers] Unrecognized keys in `rope_parameters` for 'rope_type'='default': {'mrope_section'}
+[transformers] Unrecognized keys in `rope_parameters` for 'rope_type'='default': {'mrope_section'}
+[transformers] Model config: image_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101304. This may result in unexpected behavior.
+[transformers] Model config: video_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101305. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 101306. This may result in unexpected behavior.
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 9086.45it/s]
+  [1/48] img1.png -> img1.txt (8 chars)
+  [2/48] img2.png -> img2.txt (60 chars)
+  [3/48] img3.png -> img3.txt (24 chars)
+  [4/48] img4.png -> img4.txt (971 chars)
+  [5/48] img5.png -> img5.txt (6 chars)
+  [6/48] img6.png -> img6.txt (31 chars)
+  [7/48] img7.png -> img7.txt (189 chars)
+  [8/48] img8.png -> img8.txt (1760 chars)
+  [9/48] img9.png -> img9.txt (153 chars)
+  [10/48] img10.png -> img10.txt (27 chars)
+  [11/48] img11.png -> img11.txt (67 chars)
+  [12/48] img12.png -> img12.txt (156 chars)
+  [13/48] img13.png -> img13.txt (821 chars)
+  [14/48] img14.png -> img14.txt (96 chars)
+  [15/48] img15.png -> img15.txt (2928 chars)
+  [16/48] img16.png -> img16.txt (320 chars)
+  [17/48] img17.png -> img17.txt (1353 chars)
+  [18/48] img18.png -> img18.txt (128 chars)
+  [19/48] img19.png -> img19.txt (36 chars)
+  [20/48] img20.png -> img20.txt (994 chars)
+  [21/48] img21.png -> img21.txt (127 chars)
+  [22/48] img22.png -> img22.txt (155 chars)
+  [23/48] img23.png -> img23.txt (296 chars)
+  [24/48] img25.png -> img25.txt (23 chars)
+  [25/48] img26.png -> img26.txt (62 chars)
+  [26/48] img27.png -> img27.txt (550 chars)
+  [27/48] img28.png -> img28.txt (73 chars)
+  [28/48] img29.png -> img29.txt (209 chars)
+  [29/48] img31.png -> img31.txt (71 chars)
+  [30/48] img32.png -> img32.txt (208 chars)
+  [31/48] img33.png -> img33.txt (27 chars)
+  [32/48] img34.png -> img34.txt (152 chars)
+  [33/48] img35.png -> img35.txt (15 chars)
+  [34/48] img36.png -> img36.txt (118 chars)
+  [35/48] img38.png -> img38.txt (48 chars)
+  [36/48] img39.png -> img39.txt (425 chars)
+  [37/48] img40.png -> img40.txt (82 chars)
+  [38/48] img41.png -> img41.txt (83 chars)
+  [39/48] img42.png -> img42.txt (149 chars)
+  [40/48] img43.png -> img43.txt (30 chars)
+  [41/48] img44.png -> img44.txt (62 chars)
+  [42/48] img45.png -> img45.txt (696 chars)
+  [43/48] img46.png -> img46.txt (6 chars)
+  [44/48] img47.png -> img47.txt (479 chars)
+  [45/48] img48.png -> img48.txt (68 chars)
+  [46/48] img50.png -> img50.txt (44 chars)
+  [47/48] img52.png -> img52.txt (6119 chars)
+  [48/48] img53.png -> img53.txt (105 chars)

@@ -89,30 +89,27 @@ def extract_product(
 ) -> ProductExtraction:
     """End-to-end Stage 2 for one product: returns the filled ProductExtraction.
 
-    `use_layoutlm` is a MUTUALLY EXCLUSIVE choice of extractor, not an additive merge - this
-    changed as part of an explicit "make LayoutLMv3 the sole extractor" experiment (see
-    stage2/layoutlm.py's module docstring for the full rationale):
-      * `use_layoutlm=True` (default): skip the heuristic parser AND the barcode decode
-        entirely. A blank ProductExtraction is filled solely by `layoutlm.merge_into()`. If no
-        fine-tuned checkpoint exists yet (`layoutlm.available()` is False), this returns an
-        EMPTY extraction rather than falling back to the heuristic - that's the accepted
-        tradeoff of no longer treating the heuristic as a safety net.
-      * `use_layoutlm=False`: the pre-experiment path - heuristic parser + barcode-decoded
-        Upc/Ean, no LayoutLMv3 at all. Kept as a comparison arm, not deleted:
-        `eval_stage2.py`'s `--layoutlm` flag toggles between these two alternatives now,
-        rather than "heuristic vs. heuristic-plus-model" as it did before.
-    Import of layoutlm is lazy so torch/transformers are only touched when this tier runs.
+    The heuristic parser always runs - it's the only piece with real coverage of the full
+    ~36-field ground-truth schema (Ingredients, Nutritional_Details, Preservatives, etc. have
+    no LayoutLMv3 label at all). LayoutLMv3 runs by DEFAULT too (`use_layoutlm=True`) and only
+    ever MERGES in - fills a field the heuristic left blank, or overrides one only when
+    markedly more confident (ProductExtraction.set's own rule) - it never replaces the
+    heuristic as the primary source. (An earlier experiment made LayoutLMv3 the SOLE
+    extractor, skipping the heuristic and barcode entirely - reverted, since LayoutLMv3's
+    label set only covers 14 of ~36 fields and its weak-labelled confidence isn't high enough
+    to stand alone; most fields came back null.) Pass `use_layoutlm=False` to skip the merge
+    (e.g. an A/B eval run that wants the heuristic alone). Import of layoutlm is lazy so
+    torch/transformers are only touched when this tier actually runs.
     """
     layout_lines, text_lines, bc, _ = collect_lines_and_barcode(image_paths, policy, cfg)
+    extraction = heuristic.parse(text_lines, layout_lines, bc)
 
     if use_layoutlm:
         from . import layoutlm
 
-        extraction = ProductExtraction()
-        # LayoutLMv3 reasons over word POSITIONS - it must see layout_lines (real boxes),
-        # never text_lines (the VLM's fake whole-crop box would make its spatial signal
-        # meaningless).
-        layoutlm.merge_into(extraction, layout_lines)
-        return extraction
-
-    return heuristic.parse(text_lines, layout_lines, bc)
+        if layoutlm.available():
+            # LayoutLMv3 reasons over word POSITIONS - it must see layout_lines (real boxes),
+            # never text_lines (the VLM's fake whole-crop box would make its spatial signal
+            # meaningless).
+            layoutlm.merge_into(extraction, layout_lines)
+    return extraction

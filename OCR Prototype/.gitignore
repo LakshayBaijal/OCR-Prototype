@@ -1,0 +1,12 @@
+.venv/
+_smoke/
+__pycache__/
+.DS_Store
+bgmask_cache.sqlite
+layoutlmv3_finetuned/
+.env
+venv/
+Dataset/
+layoutlmv3_finetuned/
+ocr_cache.sqlite.env.bak
+*.bak
